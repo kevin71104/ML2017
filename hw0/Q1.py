@@ -13,7 +13,6 @@ for line in f:
     numbers = map(int, line.split(','))
     y.append(numbers)
 f.close()
-#print(y)
 z = np.mat(x) * np.mat(y)
 z = np.array(z)
 #print(x)
