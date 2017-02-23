@@ -9,14 +9,20 @@ f.close()
 f = open(sys.argv[2] , 'r')
 y = []
 for line in f:
+    # map will return a list
     numbers = map(int, line.split(','))
     y.append(numbers)
 f.close()
 #print(y)
 z = np.mat(x) * np.mat(y)
 z = np.array(z)
-z.sort()
-f = open('ans_one.txt' , 'w')
+#print(x)
+#print(y)
+#print(z)
+ans = []
 for row in z:
-    for it in row:
-        f.write(str(it)+'\n')
+    ans.extend(row)
+ans.sort()
+f = open('ans_one.txt' , 'w')
+for it in ans:
+    f.write(str(it)+'\n')
