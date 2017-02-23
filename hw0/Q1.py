@@ -1,0 +1,2 @@
+pet = 'pusheen'
+print (pet)
