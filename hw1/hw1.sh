@@ -1,2 +1,2 @@
 #!/bin/bash
-python3.5 hw1.py
+python3.5 hw1.py $1 $2 $3
