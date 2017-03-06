@@ -126,7 +126,7 @@ with open(sys.argv[3],'w') as csvFile:
     for row in output:
         csvFile.write('\nid_' + str(x) + ',' + str(row))
         x = x+1
-with open('model.csv','w') as csvFile:
+with open('model'+sys.argv[3],'w') as csvFile:
     csvFile.write(str(b_his[-1]))
     for row in w_his[-1]:
         csvFile.write(' ' + str(row))
