@@ -32,21 +32,23 @@ for month in range(len(train_data)):
     print()
 """
 
-# model: y = w0 + wi*xi (i from 1 to 9)
+# model: y = w0 + wi*xi (i from 1 to 9) +w10*x8^2 + w11*x9^2
 # initialize parameters
-w = np.array([4]*10)
-gradprev = np.array([1]*10) #0-array
+w = np.array([4]*12)
+gradprev = np.array([0]*12) #0-array
 lr = 1
 lb = 0.1 #regularization coefficient
-iteration = 1500000
+lb2 = 0
+iteration = 3000000
 w_his = [w]
 #num_ex = len(train_data[0])-9
 num_ex = len(train_data)-9
 
+
 # start training
 for i in range(iteration):
     print(str(i)+ '\b'*7 , end = '')
-    w_grad = np.zeros(10)
+    w_grad = np.zeros(12)
     #stochastic: pick only one random example
     """by month
     month = rnd.randrange(12)
@@ -54,9 +56,12 @@ for i in range(iteration):
     ip = np.array([1]+train_data[month][n:n+9])
     temp = (-2)*(train_data[month][n+9]-np.inner(w,ip))"""
     n = rnd.randrange(num_ex)
-    ip = np.array([1]+train_data[n:n+9])
+    """while n%480 > 471:
+        print(str(i)+' '+str(n%480))
+        n = rnd.randrange(num_ex)"""
+    ip = np.array([1]+train_data[n:n+9]+[train_data[n+7]**2]+[train_data[n+8]**2])
     temp = (-2)*(train_data[n+9]-np.inner(w,ip))
-    grad = np.array([temp]*10)*ip + 2*np.array([0.0]+[lb]*9)*w
+    grad = np.array([temp]*12)*ip + 2*np.array([0.0]+[lb]*9+[lb2]*2)*w
     gradprev = gradprev + grad**2
     #update parameters
     w = w - lr/np.sqrt(gradprev)*grad
@@ -67,7 +72,7 @@ output = []
 with open(sys.argv[2],'r',encoding='big5') as csvFile:
     for row in csv.reader(csvFile):
         if(row[1] == 'PM2.5'):
-             test_data = np.array( [1] + list( map(int,row[2:12])) )
+             test_data = np.array( [1] + list( map(int,row[2:11])) +[int(row[9])**2]+[int(row[10])**2])
              output.append(np.inner(test_data,w_his[-1]))
 #write output
 x = 0
