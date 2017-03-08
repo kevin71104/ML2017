@@ -2,44 +2,72 @@ import numpy as np
 import random as rnd
 import sys
 import csv
-"""
-# get train data(by month)
-train_data = [[] for x in range(12)]
-month = 0
-count = 0
-with open(sys.argv[1],'r',encoding='big5') as csvFile:
-    for row in csv.reader(csvFile):
-        if(row[2] == 'PM2.5'):
-            count = count + 1
-            train_data[month].extend( list( map(int,row[3:27]) ) )
-            if(count == 20):
-                month = month + 1
-                count = 0
-"""
+import math
+
+def isfloat(value):
+  try:
+    float(value)
+    return True
+  except ValueError:
+    return False
+
+def myfloat(a):
+    if isfloat(a):
+        return float(a)
+    else:
+        return 0.0
+
 # get train data
 train_data = []
+otherdata = [[] for x in range(17)]
 with open(sys.argv[1],'r',encoding='big5') as csvFile:
     for row in csv.reader(csvFile):
         if(row[2] == 'PM2.5'):
-            train_data.extend( list( map(int,row[3:27]) ) )
-"""
-for month in range(len(train_data)):
-    print('month'+str(month+1),end = ':')
-    for i in range(len(train_data[month])):
-        if(i%24 == 0):
-            print()
-        print(train_data[month][i],end = ' ')
-    print()
-"""
-
+            train_data.extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'AMB_TEMP'):
+            otherdata[0].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'CH4'):
+            otherdata[1].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'CO'):
+            otherdata[2].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'NMHC'):
+            otherdata[3].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'NO'):
+            otherdata[4].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'NO2'):
+            otherdata[5].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'NOx'):
+            otherdata[6].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'O3'):
+            otherdata[7].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'PM10'):
+            otherdata[8].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'RAINFALL'):
+            otherdata[9].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'RH'):
+            otherdata[10].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'SO2'):
+            otherdata[11].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'THC'):
+            otherdata[12].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'WD_HR'):
+            otherdata[13].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'WIND_DIREC'):
+            otherdata[14].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'WIND_SPEED'):
+            otherdata[15].extend( list( map(myfloat,row[3:27]) ) )
+        elif(row[2] == 'WS_HR'):
+            otherdata[16].extend( list( map(myfloat,row[3:27]) ) )
+otherdata = np.array(otherdata)
+otherdata = np.transpose(otherdata)
 # model: y = w0 + wi*xi (i from 1 to 9) +w10*x8^2 + w11*x9^2
 # initialize parameters
-w = np.array([4]*12)
+w = np.array([(0.5)]*12)
 gradprev = np.array([0]*12) #0-array
 lr = 1
-lb = 0.1 #regularization coefficient
-lb2 = 0
-iteration = 3000000
+lb = 0.0001 #regularization coefficient
+lb2 = 0.00001
+iteration = 5000000
 w_his = [w]
 #num_ex = len(train_data[0])-9
 num_ex = len(train_data)-9
