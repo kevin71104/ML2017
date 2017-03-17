@@ -13,7 +13,10 @@ def isfloat(value):
 
 def myfloat(a):
     if isfloat(a):
-        return float(a)
+        if ( float(a) > 0):
+            return float(a)
+        else:
+            return 0.0
     else:
         return 0.0
 
@@ -60,47 +63,55 @@ with open(sys.argv[1],'r',encoding='big5') as csvFile:
             otherdata[16].extend( list( map(myfloat,row[3:27]) ) )
 otherdata = np.array(otherdata)
 otherdata = np.transpose(otherdata)
+
 # model: y = w0 + wi*xi (i from 1 to 9) +w10*x8^2 + w11*x9^2
 # initialize parameters
-w = np.array([(0.5)]*12)
-gradprev = np.array([0]*12) #0-array
-lr = 1
-lb = 0.0001 #regularization coefficient
+w  = np.array([0.001]*8 + [0.001, 0.001, 0.001, 0.004])
+gradprev = np.array([0.0]*12)
+lr = np.array([0.1]*8 + [0.0006, 0.1, 0.1, 0.00005])
+lb = 0.001 #regularization coefficient
 lb2 = 0.00001
-iteration = 5000000
+iteration = 2300000
 w_his = [w]
-#num_ex = len(train_data[0])-9
 num_ex = len(train_data)-9
 
-
 # start training
-for i in range(iteration):
-    print(str(i)+ '\b'*7 , end = '')
+success   = 0
+traintime = 0
+while(1):
+#for i in range(iteration):
+    print(str(traintime)+ '\b'*7 , end = '')
     w_grad = np.zeros(12)
     #stochastic: pick only one random example
-    """by month
-    month = rnd.randrange(12)
     n = rnd.randrange(num_ex)
-    ip = np.array([1]+train_data[month][n:n+9])
-    temp = (-2)*(train_data[month][n+9]-np.inner(w,ip))"""
-    n = rnd.randrange(num_ex)
-    """while n%480 > 471:
-        print(str(i)+' '+str(n%480))
-        n = rnd.randrange(num_ex)"""
+    while( n % 480 > 470):
+        n = rnd.randrange(num_ex)
     ip = np.array([1]+train_data[n:n+9]+[train_data[n+7]**2]+[train_data[n+8]**2])
-    temp = (-2)*(train_data[n+9]-np.inner(w,ip))
-    grad = np.array([temp]*12)*ip + 2*np.array([0.0]+[lb]*9+[lb2]*2)*w
+    temp = (train_data[n+9]-np.inner(w,ip))
+    if(temp < 0.0004 and temp > -0.0004):
+        success = success + 1
+        print('success: ' + str(success) + 'temp: ' + str(temp))
+        if(success > 100 or traintime > iteration):
+            if(temp < 0.0001 and temp > -0.0001):
+                print('last success: ' + str(temp))
+                break
+    grad = np.array([temp*(-2)]*12)*ip + 2*np.array([0.0]+[lb]*8+[lb2]*3)*w
+    #grad = np.array([temp]*12)*ip
     gradprev = gradprev + grad**2
     #update parameters
     w = w - lr/np.sqrt(gradprev)*grad
     #store parameters
     w_his.append(w)
+    traintime = traintime + 1
+print('\nsuccess: ' + str(success))
+print('iteration: ' + str(traintime))
+
 # get test data
 output = []
 with open(sys.argv[2],'r',encoding='big5') as csvFile:
     for row in csv.reader(csvFile):
         if(row[1] == 'PM2.5'):
-             test_data = np.array( [1] + list( map(int,row[2:11])) +[int(row[9])**2]+[int(row[10])**2])
+             test_data = np.array( [1] + list( map(myfloat,row[2:11])) +[myfloat(row[9])**2]+[myfloat(row[10])**2])
              output.append(np.inner(test_data,w_his[-1]))
 #write output
 x = 0
@@ -111,7 +122,21 @@ with open(sys.argv[3],'w') as csvFile:
         x = x+1
 with open('model'+sys.argv[3],'w') as csvFile:
     for row in range(len(w_his[-1])):
-        if(row == 0):
-            csvFile.write(str(w_his[-1][row]))
-        else:
-            csvFile.write(',' + str(w_his[-1][row]))
+        csvFile.write(str(row)+',' + str(w_his[-1][row])+'\n')
+    csvFile.write('\n\nw_history:\n')
+    """for i in range(5):
+        csvFile.write('number'+str(i)+'\n')
+        for row in range(len(w_his[-1])):
+            csvFile.write(str(w_his[i][row])+', ')
+        csvFile.write('\n')
+    for i in range(5):
+        csvFile.write('number'+str(len(w_his)-6+i)+'\n')
+        for row in range(len(w_his[-1])):
+            csvFile.write(str(w_his[len(w_his)-6+i][row])+', ')
+        csvFile.write('\n')"""
+    for i in range(len(w_his)):
+        if((i%5000) == 0 ):
+            csvFile.write(str(i)+':')
+            csvFile.write(str(w_his[i][0])+ ' ')
+            csvFile.write(str(w_his[i][8:12]))
+            csvFile.write('\n')
