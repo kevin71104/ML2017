@@ -64,14 +64,17 @@ with open(sys.argv[1],'r',encoding='big5') as csvFile:
 otherdata = np.array(otherdata)
 otherdata = np.transpose(otherdata)
 
+mean = np.mean(train_data);
+var  = np.var(train_data);
+
 # model: y = w0 + wi*xi (i from 1 to 9) +w10*x8^2 + w11*x9^2
 # initialize parameters
-w  = np.array([0.001]*8 + [0.001, 0.001, 0.001, 0.004])
+w  = np.array([0.001]*8 + [0.01, 1.1, 0.001, 0.004])
 gradprev = np.array([0.0]*12)
-lr = np.array([0.1]*8 + [0.0006, 0.1, 0.1, 0.00005])
+lr = np.array([0.1]*8 + [0.0005, 0.1, 0.1, 0.00002])
 lb = 0.001 #regularization coefficient
 lb2 = 0.00001
-iteration = 2300000
+iteration = 2600000
 w_his = [w]
 num_ex = len(train_data)-9
 
@@ -88,14 +91,14 @@ while(1):
         n = rnd.randrange(num_ex)
     ip = np.array([1]+train_data[n:n+9]+[train_data[n+7]**2]+[train_data[n+8]**2])
     temp = (train_data[n+9]-np.inner(w,ip))
-    if(temp < 0.0004 and temp > -0.0004):
+    if(temp < 0.0003 and temp > -0.0003):
         success = success + 1
         print('success: ' + str(success) + 'temp: ' + str(temp))
         if(success > 100 or traintime > iteration):
-            if(temp < 0.0001 and temp > -0.0001):
+            #if(temp < 0.0001 and temp > -0.0001):
                 print('last success: ' + str(temp))
                 break
-    grad = np.array([temp*(-2)]*12)*ip + 2*np.array([0.0]+[lb]*8+[lb2]*3)*w
+    grad = np.array([temp*(-2)]*12)*ip + 2*np.array([0.0]+[lb]*10+[lb2]*1)*w
     #grad = np.array([temp]*12)*ip
     gradprev = gradprev + grad**2
     #update parameters
