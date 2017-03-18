@@ -13,17 +13,20 @@ def isfloat(value):
 
 def myfloat(a):
     if isfloat(a):
-        return float(a)
+        if ( float(a) > 0):
+            return float(a)
+        else:
+            return 0.0
     else:
         return 0.0
 
 # get train data
-prevdata = []
+train_data = []
 otherdata = [[] for x in range(17)]
 with open(sys.argv[1],'r',encoding='big5') as csvFile:
     for row in csv.reader(csvFile):
         if(row[2] == 'PM2.5'):
-            prevdata.extend( list( map(myfloat,row[3:27]) ) )
+            train_data.extend( list( map(myfloat,row[3:27]) ) )
         elif(row[2] == 'AMB_TEMP'):
             otherdata[0].extend( list( map(myfloat,row[3:27]) ) )
         elif(row[2] == 'CH4'):
@@ -60,65 +63,65 @@ with open(sys.argv[1],'r',encoding='big5') as csvFile:
             otherdata[16].extend( list( map(myfloat,row[3:27]) ) )
 otherdata = np.array(otherdata)
 otherdata = np.transpose(otherdata)
-"""
-x = 0
-for row in otherdata[9]:
-    x = x+1
-    print (row, end = ' ')
-    if (x % 24 == 0): print('\n')
-"""
-# model: y = b + wi*xi (i from 0 to 25)
-# prev 9 hours + other 17 parameters
-# initialize parameters
-b = 4.0
-w = np.array([4.0]*26)
-lb = 10 #regularization coefficient
-bprev = 1.0
-gradprev = np.array([1.0]*26)
-lr = 1
-iteration = 1500000
-b_his = [b]
-w_his = [w]
-num_ex = len(prevdata)-9
 
+#mean = np.mean(train_data);
+#var  = np.var(train_data);
+
+w = []
+with open('model_best.csv','r')as csvFile:
+    for row in csv.reader(csvFile):
+        w.append(float(row[1]))
+w = np.array(w)
+w_his = [w]
+
+
+# model: y = w0 + wi*xi (i from 1 to 9) +w10*x8^2 + w11*x9^2
+#w  = np.array([0.001]*8 + [0.01, 1.0, 0.001, 0.0027])
+gradprev = np.array([0.0]*12)
+lr = np.array([0.000002]*12 )
+lb  = 0.000001 #regularization coefficient
+lb2 = 0.000001
+iteration = 2600000
+num_ex = len(train_data)-9
 
 # start training
-for i in range(iteration):
-    print(str(i)+ '\b'*8,end = '')
-    b_grad = 0.0
-    w_grad = np.zeros(26)
+success   = 0
+traintime = 0
+while(1):
+#for i in range(iteration):
+    print(str(traintime)+ '\b'*7 , end = '')
+    w_grad = np.zeros(12)
     #stochastic: pick only one random example
     n = rnd.randrange(num_ex)
-    ip = np.append(np.array(prevdata[n:n+9]) , otherdata[n+9])
-    #print(n)
-    #print(ip)
-    temp = (-2)*(prevdata[n+9]-b-np.inner(w,ip))
-    grad = np.array([temp]*26)*ip + 2*lb*w #lb : regularization
-    bprev = bprev + (temp+2*lb*b)**2
+    while( n % 480 > 470):
+        n = rnd.randrange(num_ex)
+    ip = np.array([1]+train_data[n:n+9]+[train_data[n+7]**2]+[train_data[n+8]**2])
+    temp = (train_data[n+9]-np.inner(w,ip))
+    if(temp < 0.0005 and temp > -0.0005):
+        success = success + 1
+        print('success: ' + str(success) + 'temp: ' + str(temp))
+        if(success > 100 or traintime > iteration):
+            #if(temp < 0.0001 and temp > -0.0001):
+                print('last success: ' + str(temp))
+                break
+    grad = np.array([temp*(-2)]*12)*ip + 2*np.array([0.0]+[lb]*10+[lb2]*1)*w
+    #grad = np.array([temp]*12)*ip
     gradprev = gradprev + grad**2
     #update parameters
-    b = b - lr/math.sqrt(bprev)*temp
     w = w - lr/np.sqrt(gradprev)*grad
     #store parameters
     w_his.append(w)
-    b_his.append(b)
+    traintime = traintime + 1
+print('\nsuccess: ' + str(success))
+print('iteration: ' + str(traintime))
+
 # get test data
-other = []
 output = []
-i = 0
 with open(sys.argv[2],'r',encoding='big5') as csvFile:
     for row in csv.reader(csvFile):
-        i = i+1
         if(row[1] == 'PM2.5'):
-            prev = list( map(myfloat,row[2:11]))
-            #print(prev)
-        else:
-            other.append(myfloat(row[10]))
-        if(i%18 == 0):
-            test_data = np.array(prev + other)
-            output.append( b_his[-1] + np.inner(test_data,w_his[-1]) )
-            other = []
-
+             test_data = np.array( [1] + list( map(myfloat,row[2:11])) +[myfloat(row[9])**2]+[myfloat(row[10])**2])
+             output.append(np.inner(test_data,w_his[-1]))
 #write output
 x = 0
 with open(sys.argv[3],'w') as csvFile:
@@ -127,6 +130,22 @@ with open(sys.argv[3],'w') as csvFile:
         csvFile.write('\nid_' + str(x) + ',' + str(row))
         x = x+1
 with open('model'+sys.argv[3],'w') as csvFile:
-    csvFile.write(str(b_his[-1]))
-    for row in w_his[-1]:
-        csvFile.write(' ' + str(row))
+    for row in range(len(w_his[-1])):
+        csvFile.write(str(row)+',' + str(w_his[-1][row])+'\n')
+    csvFile.write('\n\nw_history:\n')
+    """for i in range(5):
+        csvFile.write('number'+str(i)+'\n')
+        for row in range(len(w_his[-1])):
+            csvFile.write(str(w_his[i][row])+', ')
+        csvFile.write('\n')
+    for i in range(5):
+        csvFile.write('number'+str(len(w_his)-6+i)+'\n')
+        for row in range(len(w_his[-1])):
+            csvFile.write(str(w_his[len(w_his)-6+i][row])+', ')
+        csvFile.write('\n')"""
+    for i in range(len(w_his)):
+        if((i%5000) == 0 ):
+            csvFile.write(str(i)+':')
+            csvFile.write(str(w_his[i][0])+ ' ')
+            csvFile.write(str(w_his[i][8:12]))
+            csvFile.write('\n')
