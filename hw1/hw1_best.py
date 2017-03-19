@@ -124,12 +124,12 @@ with open(sys.argv[2],'r',encoding='big5') as csvFile:
              output.append(np.inner(test_data,w_his[-1]))
 #write output
 x = 0
-with open(sys.argv[3],'w') as csvFile:
+with open('./Output/'+sys.argv[3],'w') as csvFile:
     csvFile.write('id,value')
     for row in output:
         csvFile.write('\nid_' + str(x) + ',' + str(row))
         x = x+1
-with open('model'+sys.argv[3],'w') as csvFile:
+with open('./model/'+sys.argv[3],'w') as csvFile:
     for row in range(len(w_his[-1])):
         csvFile.write(str(row)+',' + str(w_his[-1][row])+'\n')
     csvFile.write('\n\nw_history:\n')
