@@ -69,12 +69,14 @@ var  = np.var(train_data);
 
 # model: y = w0 + wi*xi (i from 1 to 9) +w10*x8^2 + w11*x9^2
 # initialize parameters
-w  = np.array([0.001]*8 + [0.01, 1.1, 0.001, 0.004])
+#w  = np.array([0.001]*8 + [0.01, 1.1, 0.001, 0.003])
+#lr = np.array([0.05]*8 + [0.0005, 0.5, 0.1, 0.00001])
+w  = np.array([1.0]*8 + [0.01 , 0.1, 0.001, 0.004])
+lr = np.array([1]*8   + [0.0005, 0.1, 0.1,   0.00002])
 gradprev = np.array([0.0]*12)
-lr = np.array([0.1]*8 + [0.0005, 0.1, 0.1, 0.00002])
 lb = 0.001 #regularization coefficient
-lb2 = 0.00001
-iteration = 2600000
+lb2 = 0.000001
+iteration = 3000000
 w_his = [w]
 num_ex = len(train_data)-9
 
@@ -98,7 +100,7 @@ while(1):
             #if(temp < 0.0001 and temp > -0.0001):
                 print('last success: ' + str(temp))
                 break
-    grad = np.array([temp*(-2)]*12)*ip + 2*np.array([0.0]+[lb]*10+[lb2]*1)*w
+    grad = np.array([temp*(-2)]*12)*ip + 2*np.array([0.0]+[lb]*8+[lb2]*3)*w
     #grad = np.array([temp]*12)*ip
     gradprev = gradprev + grad**2
     #update parameters
