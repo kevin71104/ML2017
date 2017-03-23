@@ -71,8 +71,8 @@ var  = np.var(train_data);
 # initialize parameters
 #w  = np.array([0.001]*8 + [0.01, 1.1, 0.001, 0.003])
 #lr = np.array([0.05]*8 + [0.0005, 0.5, 0.1, 0.00001])
-w  = np.array([1.0]*8 + [0.01 , 0.1, 0.001, 0.004])
-lr = np.array([1]*8   + [0.0005, 0.1, 0.1,   0.00002])
+w  = np.array([1.0]*8 + [0.01 , 0.1, 0, 0.004])
+lr = np.array([1]*8   + [0.0005, 0.1, 0,   0.00002])
 gradprev = np.array([0.0]*12)
 lb = 0.001 #regularization coefficient
 lb2 = 0.000001
