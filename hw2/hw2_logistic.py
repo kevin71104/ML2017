@@ -15,13 +15,25 @@ def myint(a):
     else:
         return 0
 
+def mytwo(a):
+    return a**2
+
+def mythree(a):
+    return a**3
+
 ####################### Read X_train ########################
 train = []
 with open(sys.argv[1],'r') as csvFile:
     for row in csv.reader(csvFile):
         train.append( list( map(myint,row) ) )
 # retrieve first row
-train  = np.array(train[1:])
+train = train[1:]
+for i in range(len(train)):
+    temp = list(map(mytwo,(train[i][0:2]+train[i][3:6]))) + \
+           list(map(mythree,(train[i][0:2]+train[i][3:6])))
+    train[i].extend(temp)
+
+train  = np.array(train)
 person = train.shape[0]  # number of person
 num_w  = train.shape[1]  # number of weight
 
@@ -61,6 +73,7 @@ his = [[b] + w.tolist()]
 
 ####################### Start Training ######################
 for traintime in range(1000):
+    #print('\b\b\b' + str(traintime),end = '')
     loss = 0.0
     wgrad.fill(0.0)
     bgrad = 0.0
@@ -92,9 +105,12 @@ with open(sys.argv[3],'r') as csvFile:
     for row in csv.reader(csvFile):
         test.append( list( map(myint,row) ) )
 # retrieve first row
-test = np.array(test[1:])
-#for i in range(10):
-#    print(test[i])
+test = test[1:]
+for i in range(len(test)):
+    temp = list(map(mytwo,(test[i][0:2]+test[i][3:6]))) + \
+           list(map(mythree,(test[i][0:2]+test[i][3:6])))
+    test[i].extend(temp)
+test  = np.array(test)
 test = (test - mean) / std
 
 ######################## Write Y_test #######################
