@@ -35,6 +35,8 @@ for i in range(len(train)):
 
 train  = np.array(train)
 person = train.shape[0]
+num_w  = train.shape[1]
+
 ###################### Readd Y_train ########################
 label = []
 with open(sys.argv[2],'r') as csvFile:
