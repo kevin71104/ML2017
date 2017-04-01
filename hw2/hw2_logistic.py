@@ -21,6 +21,9 @@ def mytwo(a):
 def mythree(a):
     return a**3
 
+def myfour(a):
+    return (a**4/10000)
+
 ####################### Read X_train ########################
 train = []
 with open(sys.argv[1],'r') as csvFile:
@@ -29,15 +32,21 @@ with open(sys.argv[1],'r') as csvFile:
 # retrieve first row
 train = train[1:]
 for i in range(len(train)):
-    temp = list(map(mytwo,(train[i][0:2]+train[i][3:6]))) + \
-           list(map(mythree,(train[i][0:2]+train[i][3:6])))
+    """
+    temp = list(map(mytwo,(train[i][0:2]+train[i][3:6])))   + \
+           list(map(mythree,(train[i][0:2]+train[i][3:6]))) + \
+           list(map(myfour,(train[i][0:2]+train[i][3:6])))
+    """
+    temp = list(map(mytwo,train[i][0:6]))   + \
+           list(map(mythree,train[i][0:6])) + \
+           list(map(myfour,train[i][0:6]))
     train[i].extend(temp)
 
 train  = np.array(train)
 person = train.shape[0]
 num_w  = train.shape[1]
 
-###################### Readd Y_train ########################
+###################### Read Y_train #########################
 label = []
 with open(sys.argv[2],'r') as csvFile:
     for row in csv.reader(csvFile):
@@ -47,7 +56,10 @@ label = np.array(label)
 ####################### Normalization #######################
 mean  = train.mean(0)
 std   = train.std(0)
+std[std == 0.0] = 1 # std = 0
+#print(std)
 train = (train - mean) / std
+#print (train[0])
 
 ################### Initialize Parameters ###################
 # Weight and its learning rate
@@ -77,16 +89,16 @@ with open('bestmodel.csv','r') as csvFile:
 his = [[b] + w.tolist()]
 
 ####################### Start Training ######################
-for traintime in range(10000):
-    print( str(traintime))
+for traintime in range(5000):
     loss = 0.0
     wgrad.fill(0.0)
     bgrad = 0.0
     z = np.sum(w * train, axis = 1) + b
     f = 1 / (1 + np.exp(-z))
-    f[f == 0] = 1e-8
-    f[f == 1] = 1-1e-8
+    f[f == 0] = 1e-10
+    f[f == 1] = 1-1e-10
     loss = -(label*np.log(f) + (1-label)*np.log((1-f)) )
+    print( str(traintime) + ' ' + str(np.sum(loss)/person))
     temp = f - label
     bgrad = np.sum(temp)
     wgrad = np.dot(temp,train)  # temp:1*m  train: m*n
@@ -100,11 +112,12 @@ for traintime in range(10000):
     his.append([b]+w.tolist())
 
 ###################### Write Parameters #####################
-storemodel = his[-1]+[bsum]+wsum.tolist()
-#storemodel = his[-1]
-with open(sys.argv[5],'w') as csvFile:
-    for row in range(len(storemodel)):
-        csvFile.write(str(row)+',' + str(storemodel[row])+'\n')
+if len(sys.argv) > 5 :
+    storemodel = his[-1]+[bsum]+wsum.tolist()
+    #storemodel = his[-1]
+    with open(sys.argv[5],'w') as csvFile:
+        for row in range(len(storemodel)):
+            csvFile.write(str(row)+',' + str(storemodel[row])+'\n')
 
 ####################### Read X_test #########################
 test = []
@@ -114,8 +127,12 @@ with open(sys.argv[3],'r') as csvFile:
 # retrieve first row
 test = test[1:]
 for i in range(len(test)):
-    temp = list(map(mytwo,(test[i][0:2]+test[i][3:6]))) + \
-           list(map(mythree,(test[i][0:2]+test[i][3:6])))
+    """temp = list(map(mytwo,(test[i][0:2]+test[i][3:6])))   + \
+           list(map(mythree,(test[i][0:2]+test[i][3:6]))) + \
+           list(map(myfour,(test[i][0:2]+test[i][3:6])))"""
+    temp = list(map(mytwo,test[i][0:6]))   + \
+           list(map(mythree,test[i][0:6])) + \
+           list(map(myfour,test[i][0:6]))
     test[i].extend(temp)
 test  = np.array(test)
 test = (test - mean) / std
