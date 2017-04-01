@@ -34,16 +34,12 @@ for i in range(len(train)):
     train[i].extend(temp)
 
 train  = np.array(train)
-person = train.shape[0]  # number of person
-num_w  = train.shape[1]  # number of weight
-
-####################### Read Y_train ########################
+person = train.shape[0]
+###################### Readd Y_train ########################
 label = []
 with open(sys.argv[2],'r') as csvFile:
     for row in csv.reader(csvFile):
-        #print(row)
         label.extend( list( map(myint,row) ) )
-#print(label)
 label = np.array(label)
 
 ####################### Normalization #######################
@@ -65,6 +61,13 @@ b     = 0.0
 blr   = 0.1
 bsum  = 1e-8
 bgrad = 0.0
+"""
+# Get previous model
+model = []
+with open('bestmodel.csv','r') as csvFile:
+    for row in csv.reader(csvFile):
+        model.append(float(row[1]))
+"""
 
 # Regularization
 
@@ -72,8 +75,8 @@ bgrad = 0.0
 his = [[b] + w.tolist()]
 
 ####################### Start Training ######################
-for traintime in range(1000):
-    #print('\b\b\b' + str(traintime),end = '')
+for traintime in range(10000):
+    print( str(traintime))
     loss = 0.0
     wgrad.fill(0.0)
     bgrad = 0.0
@@ -95,9 +98,11 @@ for traintime in range(1000):
     his.append([b]+w.tolist())
 
 ###################### Write Parameters #####################
+storemodel = his[-1]+[bsum]+wsum.tolist()
+#storemodel = his[-1]
 with open(sys.argv[5],'w') as csvFile:
-    for row in range(len(his[-1])):
-        csvFile.write(str(row)+',' + str(his[-1][row])+'\n')
+    for row in range(len(storemodel)):
+        csvFile.write(str(row)+',' + str(storemodel[row])+'\n')
 
 ####################### Read X_test #########################
 test = []

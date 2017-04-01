@@ -120,23 +120,47 @@ part1 = label[:div]
 part2 = label[div:div*2]
 part3 = label[div*2:]
 
+x = 1
 with open('y1.csv','w') as csvFile:
-    for i in range(len(part1)):
-        if i == 0:
-            csvFile.write(part1[i])
-        else:
-            csvFile.write('\n' + part1[i])
+    csvFile.write('id,label')
+    for row in part1:
+        csvFile.write('\n' + str(x) + ',' + row)
+        x = x+1
 
+x = 1
 with open('y2.csv','w') as csvFile:
-    for i in range(len(part2)):
-        if i == 0:
-            csvFile.write(part2[i])
-        else:
-            csvFile.write('\n' + part2[i])
+    csvFile.write('id,label')
+    for row in part2:
+        csvFile.write('\n' + str(x) + ',' + row)
+        x = x+1
 
+x = 1
 with open('y3.csv','w') as csvFile:
-    for i in range(len(part3)):
+    csvFile.write('id,label')
+    for row in part3:
+        csvFile.write('\n' + str(x) + ',' + row)
+        x = x+1
+
+temp = part1 + part2
+with open('./partition/y12.csv','w') as csvFile:
+    for i in range(len(temp)):
         if i == 0:
-            csvFile.write(part3[i])
+            csvFile.write(temp[i])
         else:
-            csvFile.write('\n' + part3[i])
+            csvFile.write('\n' + temp[i])
+
+temp = part1 + part3
+with open('./partition/y13.csv','w') as csvFile:
+    for i in range(len(temp)):
+        if i == 0:
+            csvFile.write(temp[i])
+        else:
+            csvFile.write('\n' + temp[i])
+
+temp = part2 + part3
+with open('./partition/y23.csv','w') as csvFile:
+    for i in range(len(temp)):
+        if i == 0:
+            csvFile.write(temp[i])
+        else:
+            csvFile.write('\n' + temp[i])
