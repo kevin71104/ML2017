@@ -24,6 +24,14 @@ def mythree(a):
 def myfour(a):
     return (a**4/10000)
 
+######################## Read train #########################
+if len(sys.argv) > 6 :
+    extra = []
+    with open(sys.argv[6],'r') as csvFile:
+        for row in csv.reader(csvFile):
+            extra.append(int(row[4]))
+#print (extra)
+
 ####################### Read X_train ########################
 train = []
 with open(sys.argv[1],'r') as csvFile:
@@ -32,15 +40,15 @@ with open(sys.argv[1],'r') as csvFile:
 # retrieve first row
 train = train[1:]
 for i in range(len(train)):
-    """
     temp = list(map(mytwo,(train[i][0:2]+train[i][3:6])))   + \
-           list(map(mythree,(train[i][0:2]+train[i][3:6]))) + \
-           list(map(myfour,(train[i][0:2]+train[i][3:6])))
-    """
-    temp = list(map(mytwo,train[i][0:6]))   + \
-           list(map(mythree,train[i][0:6])) + \
-           list(map(myfour,train[i][0:6]))
+           list(map(mythree,(train[i][0:2]+train[i][3:6])))
+    """temp = list(map(mytwo,train[i][0:6]))   + \
+           list(map(mythree,train[i][0:6]))
+           #list(map(myfour,train[i][0:6]))
+           """
     train[i].extend(temp)
+    # add education_num
+    #train[i].extend([extra[i], extra[i]**2, extra[i]**3, extra[i]**4])
 
 train  = np.array(train)
 person = train.shape[0]
@@ -84,12 +92,13 @@ with open('bestmodel.csv','r') as csvFile:
 """
 
 # Regularization
+lamb = 0.1
 
 # Record Parameters
 his = [[b] + w.tolist()]
 
 ####################### Start Training ######################
-for traintime in range(5000):
+for traintime in range(10000):
     loss = 0.0
     wgrad.fill(0.0)
     bgrad = 0.0
@@ -97,7 +106,7 @@ for traintime in range(5000):
     f = 1 / (1 + np.exp(-z))
     f[f == 0] = 1e-10
     f[f == 1] = 1-1e-10
-    loss = -(label*np.log(f) + (1-label)*np.log((1-f)) )
+    loss = -(label*np.log(f) + (1-label)*np.log((1-f)) ) + np.sum(w)*lamb
     print( str(traintime) + ' ' + str(np.sum(loss)/person))
     temp = f - label
     bgrad = np.sum(temp)
@@ -119,6 +128,15 @@ if len(sys.argv) > 5 :
         for row in range(len(storemodel)):
             csvFile.write(str(row)+',' + str(storemodel[row])+'\n')
 
+######################## Read test ##########################
+if len(sys.argv) > 7 :
+    extra = []
+    with open(sys.argv[7],'r') as csvFile:
+        for row in csv.reader(csvFile):
+            extra.append(myint(row[4]))
+    extra = extra[1:]
+#print (extra)
+
 ####################### Read X_test #########################
 test = []
 with open(sys.argv[3],'r') as csvFile:
@@ -127,13 +145,14 @@ with open(sys.argv[3],'r') as csvFile:
 # retrieve first row
 test = test[1:]
 for i in range(len(test)):
-    """temp = list(map(mytwo,(test[i][0:2]+test[i][3:6])))   + \
-           list(map(mythree,(test[i][0:2]+test[i][3:6]))) + \
-           list(map(myfour,(test[i][0:2]+test[i][3:6])))"""
-    temp = list(map(mytwo,test[i][0:6]))   + \
-           list(map(mythree,test[i][0:6])) + \
-           list(map(myfour,test[i][0:6]))
+    temp = list(map(mytwo,(test[i][0:2]+test[i][3:6])))   + \
+           list(map(mythree,(test[i][0:2]+test[i][3:6])))
+    """temp = list(map(mytwo,test[i][0:6]))   + \
+           list(map(mythree,test[i][0:6]))
+           #list(map(myfour,test[i][0:6]))"""
     test[i].extend(temp)
+    # add education_num
+    #test[i].extend([extra[i],extra[i]**2,extra[i]**3,extra[i]**4])
 test  = np.array(test)
 test = (test - mean) / std
 
