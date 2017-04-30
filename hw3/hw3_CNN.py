@@ -8,6 +8,7 @@
 
 import pandas as pd
 import numpy as np
+import random as rand
 import sys
 from keras.models import Sequential, load_model
 from keras.layers.core import Dense, Dropout, Activation
@@ -33,44 +34,34 @@ x =[]
 train_feature = train_feature/255
 classNum = 7
 
-#validation Data
+###################### validation Data ######################
 validNum = 5700
-valid_label = train_label[ :validNum]
-valid_feature = train_feature[ :validNum]
-x_label = train_label[validNum:]
-x_feature = train_feature[validNum: ]
-
+choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
+valid_label = train_label[choose]
+valid_feature = train_feature[choose]
+x_label = np.delete(train_label,choose,axis = 0)
+x_feature = np.delete(train_feature,choose,axis = 0)
 train_label = []
 train_feature = []
 
+##################### change input shape #####################
 x_feature = x_feature.reshape(x_feature.shape[0],48,48,1)
 valid_feature = valid_feature.reshape(valid_feature.shape[0],48,48,1)
 x_label = np_utils.to_categorical(x_label, classNum)
 valid_label = np_utils.to_categorical(valid_label, classNum)
 
-""" # No Validation Data
-train_feature = train_feature.reshape(train_feature.shape[0],48,48,1)
-train_label = np_utils.to_categorical(train_label, classNum)
-"""
-
 ######################### Start CNN #########################
 model = Sequential()
 
 model.add(Convolution2D(32,(3,3), activation='relu', input_shape=(48,48,1)))
-#model.add(Convolution2D(32,(3,3), input_shape=(48,48,1)))
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 model.add(Convolution2D(64,(3,3), activation='relu'))
-#model.add(Convolution2D(64,(3,3)))
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 model.add(Convolution2D(128,(3,3), activation='relu'))
-#model.add(Convolution2D(128,(3,3)))
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 
 model.add(Flatten())
 
-model.add(Dropout(0.4))
-model.add(Dense(1024))
-model.add(Activation('relu'))
 model.add(Dropout(0.4))
 model.add(Dense(1024))
 model.add(Activation('relu'))
@@ -89,15 +80,27 @@ datagen = ImageDataGenerator(
     height_shift_range=0.1
     )
 
-# adding noise
 batchNum = 100
-for i in range(4):
+for i in range(1):
     model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label), batch_size = batchNum, epochs = 4)
     model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),   # every flow has batchNum figures
                         steps_per_epoch = x_feature.shape[0]/batchNum,
                         epochs = 6,
                         validation_data = (valid_feature, valid_label)
                         )
+for i in range(1):
+    model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label), batch_size = batchNum, epochs = 2)
+    model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
+                        steps_per_epoch = x_feature.shape[0]/batchNum,
+                        epochs = 4,
+                        validation_data = (valid_feature, valid_label)
+                        )
+model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
+                    steps_per_epoch = x_feature.shape[0]/batchNum,
+                    epochs = 10,
+                    validation_data = (valid_feature, valid_label)
+                    )
+
 
 model.save(sys.argv[2])
 
@@ -105,9 +108,3 @@ score = model.evaluate(x_feature, x_label)
 print ("\nTrain accuracy:", score[1])
 score2 = model.evaluate(valid_feature, valid_label)
 print ("\nValid accuracy:", score2[1])
-
-""" # No adding noise
-es = EarlyStopping(monitor = 'val_loss', patience = 3, verbose = 1)
-model.fit(train_feature, train_label, validation_split = 0.2, callbacks = [es], batch_size = 100, epochs = 20)
-model.fit(train_feature, train_label, validation_split = 0.1, batch_size = 100, epochs = 20)
-"""
