@@ -1,11 +1,10 @@
-#############################################################
-#                   Machine Learning 2017                   #
-#            Hw3 : Image Sentiment Classification           #
-#                Convolutional Neural Network               #
-#                Description : training model               #
-#            script : python3 train.csv model.h5            #
-#############################################################
-
+################################################################################
+#                            Machine Learning 2017                             #
+#                     Hw3 : Image Sentiment Classification                     #
+#                         Convolutional Neural Network                         #
+#                         Description : training model                         #
+#                     script : python3 train.csv model.h5                      #
+################################################################################
 import pandas as pd
 import numpy as np
 import random as rand
@@ -18,7 +17,7 @@ from keras.utils import np_utils
 from keras.callbacks import EarlyStopping
 from keras.preprocessing.image import ImageDataGenerator
 
-######################### Read File #########################
+################################## Read File ###################################
 with open(sys.argv[1],'r') as csvFile:
     train = pd.read_csv(csvFile)
 train_feature = train['feature']
@@ -34,7 +33,7 @@ x =[]
 train_feature = train_feature/255
 classNum = 7
 
-###################### validation Data ######################
+############################### validation Data ################################
 validNum = 5700
 choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
 valid_label = train_label[choose]
@@ -44,13 +43,13 @@ x_feature = np.delete(train_feature,choose,axis = 0)
 train_label = []
 train_feature = []
 
-##################### change input shape #####################
+############################## change input shape ##############################
 x_feature = x_feature.reshape(x_feature.shape[0],48,48,1)
 valid_feature = valid_feature.reshape(valid_feature.shape[0],48,48,1)
 x_label = np_utils.to_categorical(x_label, classNum)
 valid_label = np_utils.to_categorical(valid_label, classNum)
 
-######################### Start CNN #########################
+################################## Start CNN ###################################
 model = Sequential()
 
 model.add(Convolution2D(32,(3,3), activation='relu', input_shape=(48,48,1)))

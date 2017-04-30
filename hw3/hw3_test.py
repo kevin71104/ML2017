@@ -1,9 +1,18 @@
+#############################################################
+#                   Machine Learning 2017                   #
+#            Hw3 : Image Sentiment Classification           #
+#                Convolutional Neural Network               #
+#         description : use model to get prediction         #
+#        script : python3 test.csv model.h5 ans.csv         #
+#############################################################
+
 import pandas as pd
 import numpy as np
 import sys
 from keras.models import load_model
 #from keras.utils import np_utils
 
+######################### Read File #########################
 with open(sys.argv[1],'r') as csvFile:
     test = pd.read_csv(csvFile)
 test_feature = test['feature']
