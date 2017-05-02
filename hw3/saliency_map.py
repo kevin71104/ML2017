@@ -1,3 +1,10 @@
+################################################################################
+#                            Machine Learning 2017                             #
+#                      Hw3 : Image Sentiment Classification                    #
+#                   Description : analyze figure hotspot                       #
+#                          script : python3 model.h5                           #
+################################################################################
+
 from keras.models import load_model
 from termcolor import colored,cprint
 import keras.backend as K
