@@ -1,7 +1,7 @@
 ################################################################################
 #                            Machine Learning 2017                             #
 #                      Hw3 : Image Sentiment Classification                    #
-#                         Description : analyze model                          #
+#           Description : analyze model accuracy on training data              #
 #                          script : python3 model.h5                           #
 ################################################################################
 import sys
@@ -13,13 +13,14 @@ from sklearn.metrics import confusion_matrix
 from keras.models import load_model
 import matplotlib.pyplot as plt
 
-def plot_confusion_matrix(cm, classes,
+def plot_confusion_matrix(cm, classes, validsize,
                           title='Confusion matrix',
-                          cmap=plt.cm.coolwarm):
+                          cmap=plt.cm.coolwarm
+                          ):
 
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
+    plt.title(title + '({}) valid size({})'.format(sys.argv[1][:-3], validsize))
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
@@ -49,7 +50,7 @@ x =[]
 train_feature = train_feature/255
 classNum = 7
 ############################### validation Data ################################
-validNum = 5700
+validNum = 10000
 choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
 valid_label = train_label[choose]
 valid_feature = train_feature[choose]
@@ -63,5 +64,10 @@ predictions = model.predict_classes(valid_feature)
 conf_mat = confusion_matrix(valid_label,predictions)
 
 plt.figure()
-plot_confusion_matrix(conf_mat, classes=["Angry","Disgust","Fear","Happy","Sad","Surprise","Neutral"])
-plt.show()
+plot_confusion_matrix(conf_mat,
+                      classes=["Angry","Disgust","Fear","Happy","Sad","Surprise","Neutral"],
+                      validsize = validNum )
+#plt.show()
+fig = plt.gcf()
+plt.draw()
+fig.savefig('./figure/confusion_matrix({}).png'.format(sys.argv[1][:-3]))

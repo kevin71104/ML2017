@@ -1,3 +1,10 @@
+################################################################################
+#                            Machine Learning 2017                             #
+#                      Hw3 : Image Sentiment Classification                    #
+#                Description : analyze filter specific layer                   #
+#                          script : python3 model.h5                           #
+################################################################################
+
 #!/usr/bin/env python
 # -- coding: utf-8 --
 

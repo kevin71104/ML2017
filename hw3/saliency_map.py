@@ -23,7 +23,7 @@ train_feature = train_feature.reshape(train_feature.shape[0],48,48,1)
 
 model = load_model(sys.argv[1])
 input_img = model.input
-img_ids = [9, 74, 1111, 5010]
+img_ids = [1111]
 
 for idx in img_ids:
     origin = train_feature[idx].reshape(48, 48)
@@ -33,7 +33,7 @@ for idx in img_ids:
     plt.tight_layout()
     fig = plt.gcf()
     plt.draw()
-    fig.savefig('./figure/saliency\ map/'+str(idx)+".png", dpi=100)
+    fig.savefig('./figure/saliency_map/'+str(idx)+".png", dpi=100)
 
     val_proba = model.predict((train_feature[idx]/255).reshape(1,48,48,1))
     pred = val_proba.argmax(axis=-1)
@@ -51,7 +51,7 @@ for idx in img_ids:
     #heatmap /= np.max(heatmap)
     '''---------------end heatmap processing--------------'''
 
-    thres = 0.3
+    thres = 0.2
     see = train_feature[idx].reshape(48, 48)
     loc = heatmap <= thres
     loc = loc.reshape(48,48)
@@ -64,7 +64,7 @@ for idx in img_ids:
     plt.tight_layout()
     fig = plt.gcf()
     plt.draw()
-    fig.savefig("./figure/saliency\ map/"+str(idx)+"_heatmap.png",dpi=100)
+    fig.savefig("./figure/saliency_map/"+str(idx)+"_heatmap.png",dpi=100)
 
     plt.figure()
     plt.imshow(see,cmap='gray')
@@ -72,4 +72,4 @@ for idx in img_ids:
     plt.tight_layout()
     fig = plt.gcf()
     plt.draw()
-    fig.savefig('./figure/saliency\ map/'+str(idx)+"_mask.png", dpi=100)
+    fig.savefig('./figure/saliency_map/'+str(idx)+"_mask.png", dpi=100)
