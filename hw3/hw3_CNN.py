@@ -12,9 +12,10 @@ import sys
 from keras.models import Sequential, load_model
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers import Convolution2D, MaxPooling2D, Flatten
+from keras.layers.normalization import BatchNormalization
 from keras.optimizers import SGD, Adam
 from keras.utils import np_utils
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, CSVLogger, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
 
 ################################## Read File ###################################
@@ -32,14 +33,20 @@ x =[]
 
 train_feature = train_feature/255
 classNum = 7
-
+validNum = 5000
+randvalid = 0
 ############################### validation Data ################################
-validNum = 5700
-choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
-valid_label = train_label[choose]
-valid_feature = train_feature[choose]
-x_label = np.delete(train_label,choose,axis = 0)
-x_feature = np.delete(train_feature,choose,axis = 0)
+if randvalid == 1:
+    choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
+    valid_label = train_label[choose]
+    valid_feature = train_feature[choose]
+    x_label = np.delete(train_label,choose,axis = 0)
+    x_feature = np.delete(train_feature,choose,axis = 0)
+else:
+    valid_label = train_label[:validNum]
+    valid_feature = train_feature[:validNum]
+    x_feature = train_feature[validNum:]
+    x_label = train_label[validNum:]
 train_label = []
 train_feature = []
 
@@ -52,25 +59,35 @@ valid_label = np_utils.to_categorical(valid_label, classNum)
 ################################## Start CNN ###################################
 model = Sequential()
 
-model.add(Convolution2D(32,(3,3), activation='relu', input_shape=(48,48,1)))
+model.add(Convolution2D(32,(3,3), input_shape=(48,48,1)))
+model.add(Activation('relu'))
+model.add(BatchNormalization())
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 model.add(Convolution2D(64,(3,3), activation='relu'))
+model.add(BatchNormalization())
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 model.add(Convolution2D(128,(3,3), activation='relu'))
+model.add(BatchNormalization())
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 
 model.add(Flatten())
 
 model.add(Dropout(0.4))
+model.add(Dense(512))
+model.add(Activation('relu'))
+model.add(BatchNormalization())
+
+model.add(Dropout(0.4))
 model.add(Dense(1024))
 model.add(Activation('relu'))
+model.add(BatchNormalization())
 
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 model.add(Dense(classNum))
 model.add(Activation('softmax'))
 
 model.summary()
-model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer="adamax", metrics=['accuracy'])
 
 # Image Preprocessing - add noise
 datagen = ImageDataGenerator(
@@ -80,28 +97,28 @@ datagen = ImageDataGenerator(
     )
 
 batchNum = 100
-for i in range(1):
-    model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label), batch_size = batchNum, epochs = 4)
-    model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),   # every flow has batchNum figures
-                        steps_per_epoch = x_feature.shape[0]/batchNum,
-                        epochs = 6,
-                        validation_data = (valid_feature, valid_label)
-                        )
-for i in range(1):
-    model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label), batch_size = batchNum, epochs = 2)
+number = 1
+csv_logger = CSVLogger('training' + str(number) + '.log') # store training info
+save = ModelCheckpoint(sys.argv[2], monitor='val_acc', verbose=0,
+                       save_best_only = True, save_weights_only=False,
+                       mode='auto', period=1) # save improved model only
+model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
+              batch_size = batchNum, epochs = 20, callbacks=[csv_logger, save])
+
+for i in range(30):
+    number = number + 1
+    csv_logger = CSVLogger('training' + str(number) + '.log')
+    # every flow has batchNum figures
     model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
                         steps_per_epoch = x_feature.shape[0]/batchNum,
                         epochs = 4,
-                        validation_data = (valid_feature, valid_label)
+                        validation_data = (valid_feature, valid_label),
+                        callbacks=[csv_logger, save]
                         )
-model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
-                    steps_per_epoch = x_feature.shape[0]/batchNum,
-                    epochs = 10,
-                    validation_data = (valid_feature, valid_label)
-                    )
-
-
-model.save(sys.argv[2])
+    number = number + 1
+    csv_logger = CSVLogger('training' + str(number) + '.log') # store training info
+    model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
+              batch_size = batchNum, epochs = 2, callbacks=[csv_logger, save])
 
 score = model.evaluate(x_feature, x_label)
 print ("\nTrain accuracy:", score[1])

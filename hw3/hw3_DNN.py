@@ -1,11 +1,10 @@
-#############################################################
-#                   Machine Learning 2017                   #
-#            Hw3 : Image Sentiment Classification           #
-#                    Dense Neural Network                   #
-#                Description : training model               #
-#            script : python3 train.csv model.h5            #
-#############################################################
-
+################################################################################
+#                             Machine Learning 2017                            #
+#                      Hw3 : Image Sentiment Classification                    #
+#                              Dense Neural Network                            #
+#                          Description : training model                        #
+#                      script : python3 train.csv model.h5                     #
+################################################################################
 import pandas as pd
 import numpy as np
 import sys
