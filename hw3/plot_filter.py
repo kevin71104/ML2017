@@ -10,6 +10,7 @@
 
 import matplotlib.pyplot as plt
 from keras.models import load_model
+from keras.utils.vis_utils import plot_model
 from keras import backend as K
 import numpy as np
 import sys
@@ -37,13 +38,16 @@ def grad_ascent(num_step, input_image_data, iter_func):
 def main():
     emotion_classifier = load_model(sys.argv[1])
 
+    plot_model(emotion_classifier,to_file='model.png') # plot model
+
     layer_dict = dict([layer.name, layer] for layer in emotion_classifier.layers[:])
     '''print('\n\n')
     emotion_classifier.summary()
     print('\n\n')'''
     input_img = emotion_classifier.input
 
-    name_ls = ['activation_1','conv2d_1', 'batch_normalization_1', 'max_pooling2d_1', 'conv2d_2']
+    #name_ls = ['activation_1','conv2d_1', 'batch_normalization_1', 'max_pooling2d_1', 'conv2d_2']
+    name_ls = ['activation_1']
     collect_layers = [layer_dict[name].output for name in name_ls]
     num_filter = int(collect_layers[0].shape[3])
     num_step = 20
