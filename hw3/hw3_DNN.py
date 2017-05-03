@@ -32,8 +32,25 @@ x =[]
 
 train_feature = train_feature/255
 classNum = 7
-train_label = np_utils.to_categorical(train_label, classNum)
-
+############################### validation Data ################################
+validNum = 5000
+randvalid = 0
+if randvalid == 1:
+    choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
+    valid_label = train_label[choose]
+    valid_feature = train_feature[choose]
+    x_label = np.delete(train_label,choose,axis = 0)
+    x_feature = np.delete(train_feature,choose,axis = 0)
+else:
+    valid_label = train_label[:validNum]
+    valid_feature = train_feature[:validNum]
+    x_feature = train_feature[validNum:]
+    x_label = train_label[validNum:]
+train_label = []
+train_feature = []
+############################## change input shape ##############################
+x_label = np_utils.to_categorical(x_label, classNum)
+valid_label = np_utils.to_categorical(valid_label, classNum)
 ######################### Start DNN #########################
 model = Sequential()
 
@@ -63,8 +80,8 @@ save = ModelCheckpoint(sys.argv[2], monitor='val_acc', verbose=0,
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=2,
                       verbose=1, mode='auto')
 
-model.fit(train_feature, train_label, validation_split = 0.15,
-          batch_size = batchNum, epochs=200, callbacks=[csv_logger, save])
+model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
+          batch_size = batchNum, epochs = 200, callbacks=[csv_logger, save])
 
 model.save(sys.argv[2])
 

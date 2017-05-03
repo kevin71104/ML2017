@@ -24,7 +24,7 @@ def grad_ascent(num_step, input_image_data, iter_func):
     lr = 1
     losses = 0
     for i in range(num_step):
-        print('epoch{}'.format(i))
+        #print('epoch{}'.format(i))
         loss_value, grads_value = iter_func([input_image_data, 1])
         input_image_data += grads_value * lr
         #losses += loss_value
@@ -39,16 +39,16 @@ def grad_ascent(num_step, input_image_data, iter_func):
 def main():
     emotion_classifier = load_model(sys.argv[1])
 
-    plot_model(emotion_classifier,to_file='model.png') # plot model
+    plot_model(emotion_classifier,to_file='{}'.format(sys.argv[1][:-3])) # plot model
 
     layer_dict = dict([layer.name, layer] for layer in emotion_classifier.layers[:])
-    '''print('\n\n')
+
     emotion_classifier.summary()
-    print('\n\n')'''
+
     input_img = emotion_classifier.input
 
     #name_ls = ['activation_1','conv2d_1', 'batch_normalization_1', 'max_pooling2d_1', 'conv2d_2']
-    name_ls = ['conv2d_3']
+    name_ls = ['conv2d_2']
     collect_layers = [layer_dict[name].output for name in name_ls]
     num_filter = int(collect_layers[0].shape[3])
     num_step = 20
@@ -56,6 +56,7 @@ def main():
     for cnt, layer in enumerate(collect_layers):
         filter_imgs = [[] for i in range(num_filter)]
         for filter_idx in range(num_filter):
+            print('Filter no.{}'.format(filter_idx))
             input_img_data = np.random.random((1, 48, 48, 1)) # random noise
             target = K.mean(layer[:, :, :, filter_idx])
             grads = normalize(K.gradients(target, input_img)[0])
@@ -65,7 +66,7 @@ def main():
 
         fig = plt.figure(figsize=(14, 10))
         for i in range(num_filter):
-            axis = fig.add_subplot(num_filter/8, 8, i+1)
+            axis = fig.add_subplot(num_filter/16, 16, i+1)
             axis.imshow(filter_imgs[i][0].reshape(48, 48), cmap='BuGn')
             plt.xticks(np.array([]))
             plt.yticks(np.array([]))

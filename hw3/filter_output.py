@@ -2,7 +2,7 @@
 #                            Machine Learning 2017                             #
 #                      Hw3 : Image Sentiment Classification                    #
 #            Description : analyze output data at specific layer               #
-#                          script : python3 model.h5                           #
+#                 script : python3 filtet_output.py model.h5                   #
 ################################################################################
 
 #!/usr/bin/env python
@@ -35,18 +35,19 @@ def main():
     layer_dict = dict([layer.name, layer] for layer in emotion_classifier.layers[:])
 
     input_img = emotion_classifier.input
-    name_ls = ['activation_1','conv2d_1', 'batch_normalization_1', 'max_pooling2d_1', 'conv2d_2']
+    name_ls = ['conv2d_2','conv2d_3']
     collect_layers = [ K.function([input_img, K.learning_phase()], [layer_dict[name].output]) for name in name_ls ]
 
     choose_id = [9, 74, 1111, 5010]
     for idx in choose_id:
+        print('Figure({})'.format(idx))
         photo = (train_feature[idx]/255).reshape(1,48,48,1)
         for cnt, fn in enumerate(collect_layers):
             im = fn([photo, 0]) #get the output of that layer
             fig = plt.figure(figsize=(14, 8))
             nb_filter = im[0].shape[3]
             for i in range(nb_filter):
-                ax = fig.add_subplot(nb_filter/8, 8, i+1)
+                ax = fig.add_subplot(nb_filter/16, 16, i+1)
                 ax.imshow(im[0][0, :, :, i], cmap='BuGn')
                 plt.xticks(np.array([]))
                 plt.yticks(np.array([]))

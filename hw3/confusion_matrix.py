@@ -50,14 +50,17 @@ x =[]
 train_feature = train_feature/255
 classNum = 7
 ############################### validation Data ################################
-validNum = 10000
-choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
+validNum = 5000
+'''choose = rand.sample(range(0,train_feature.shape[0]-1),validNum)
 valid_label = train_label[choose]
-valid_feature = train_feature[choose]
+valid_feature = train_feature[choose]'''
+valid_label = train_label[:validNum]
+valid_feature = train_feature[:validNum]
 valid_feature = valid_feature.reshape(valid_feature.shape[0],48,48,1)
 
 ############################### confusion_matrix ###############################
 model = load_model(sys.argv[1])
+model.summary()
 
 np.set_printoptions(precision=2)
 predictions = model.predict_classes(valid_feature)
@@ -67,7 +70,7 @@ plt.figure()
 plot_confusion_matrix(conf_mat,
                       classes=["Angry","Disgust","Fear","Happy","Sad","Surprise","Neutral"],
                       validsize = validNum )
-#plt.show()
-fig = plt.gcf()
+plt.show()
+'''fig = plt.gcf()
 plt.draw()
-fig.savefig('./figure/confusion_matrix({}).png'.format(sys.argv[1][:-3]))
+fig.savefig('./figure/confusion_matrix({}).png'.format(sys.argv[1][:-3]))'''

@@ -3,7 +3,7 @@
 #                     Hw3 : Image Sentiment Classification                     #
 #                         Convolutional Neural Network                         #
 #                         Description : training model                         #
-#                     script : python3 train.csv model.h5                      #
+#                 script : python3 hw3_CNN.py train.csv model.h5               #
 ################################################################################
 import pandas as pd
 import numpy as np
