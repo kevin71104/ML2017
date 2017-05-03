@@ -2,7 +2,7 @@
 #                            Machine Learning 2017                             #
 #                      Hw3 : Image Sentiment Classification                    #
 #                Description : analyze filter specific layer                   #
-#                          script : python3 model.h5                           #
+#                   script : python3 plot_filter.py model.h5                   #
 ################################################################################
 
 #!/usr/bin/env python
@@ -23,7 +23,8 @@ def grad_ascent(num_step, input_image_data, iter_func):
     filter_images = []
     lr = 1
     losses = 0
-    for _ in range(num_step):
+    for i in range(num_step):
+        print('epoch{}'.format(i))
         loss_value, grads_value = iter_func([input_image_data, 1])
         input_image_data += grads_value * lr
         #losses += loss_value
@@ -47,7 +48,7 @@ def main():
     input_img = emotion_classifier.input
 
     #name_ls = ['activation_1','conv2d_1', 'batch_normalization_1', 'max_pooling2d_1', 'conv2d_2']
-    name_ls = ['activation_1']
+    name_ls = ['conv2d_3']
     collect_layers = [layer_dict[name].output for name in name_ls]
     num_filter = int(collect_layers[0].shape[3])
     num_step = 20
