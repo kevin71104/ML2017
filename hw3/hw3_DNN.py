@@ -11,9 +11,10 @@ import sys
 from keras.models import Sequential, load_model
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers import Convolution2D, MaxPooling2D, Flatten
+from keras.layers.normalization import BatchNormalization
 from keras.optimizers import SGD, Adam
 from keras.utils import np_utils
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, CSVLogger, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
 
 ######################### Read File #########################
@@ -33,25 +34,37 @@ train_feature = train_feature/255
 classNum = 7
 train_label = np_utils.to_categorical(train_label, classNum)
 
-######################### Start CNN #########################
+######################### Start DNN #########################
 model = Sequential()
-model.add(Dense(input_dim=48*48,units=1024,activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(units=1024,activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(units=1024,activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(units=1024,activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(units=1024,activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(units=7,activation='softmax'))
+
+model.add(Dense(input_dim=48*48,units=512))
+model.add(Activation('relu'))
+model.add(BatchNormalization())
+
+model.add(Dropout(0.4))
+model.add(Dense(1024))
+model.add(Activation('relu'))
+model.add(BatchNormalization())
+
+model.add(Dropout(0.3))
+model.add(Dense(classNum))
+model.add(Activation('softmax'))
 model.summary()
 model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
 
 batchNum = 100
 
-model.fit(train_feature, train_label,validation_split = 0.15,batch_size = batchNum ,epochs=20)
+# callbacks function
+number = 1
+csv_logger = CSVLogger('training' + str(number) + '.log') # store training info
+save = ModelCheckpoint(sys.argv[2], monitor='val_acc', verbose=0,
+                       save_best_only = True, save_weights_only=False,
+                       mode='auto', period=1) # save improved model only
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=2,
+                      verbose=1, mode='auto')
+
+model.fit(train_feature, train_label, validation_split = 0.15,
+          batch_size = batchNum, epochs=200, callbacks=[csv_logger, save])
 
 model.save(sys.argv[2])
 
