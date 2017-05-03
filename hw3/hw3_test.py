@@ -26,7 +26,7 @@ test_feature = test_feature.reshape(test_feature.shape[0],48,48,1)
 
 model = load_model(sys.argv[2])
 model.summary()
-plot_model(model,to_file='{}.png'.format(sys.argv[2][:-3])) # plot model
+#plot_model(model,to_file='{}.png'.format(sys.argv[2][:-3])) # plot model
 
 output = model.predict_classes(test_feature,batch_size=100,verbose=1)
 

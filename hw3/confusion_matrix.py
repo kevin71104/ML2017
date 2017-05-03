@@ -2,7 +2,7 @@
 #                            Machine Learning 2017                             #
 #                      Hw3 : Image Sentiment Classification                    #
 #           Description : analyze model accuracy on training data              #
-#                          script : python3 model.h5                           #
+#               script : python3 confusion_matrix.py model.h5                  #
 ################################################################################
 import sys
 import numpy as np

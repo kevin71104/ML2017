@@ -48,12 +48,13 @@ def main():
     input_img = emotion_classifier.input
 
     #name_ls = ['activation_1','conv2d_1', 'batch_normalization_1', 'max_pooling2d_1', 'conv2d_2']
-    name_ls = ['conv2d_2']
+    name_ls = ['conv2d_1']
     collect_layers = [layer_dict[name].output for name in name_ls]
-    num_filter = int(collect_layers[0].shape[3])
+
     num_step = 20
 
     for cnt, layer in enumerate(collect_layers):
+        num_filter = int(int(layer.shape[3])/16)*16
         filter_imgs = [[] for i in range(num_filter)]
         for filter_idx in range(num_filter):
             print('Filter no.{}'.format(filter_idx))
@@ -64,7 +65,7 @@ def main():
 
             filter_imgs[filter_idx] = grad_ascent(num_step, input_img_data, iterate)
 
-        fig = plt.figure(figsize=(14, 10))
+        fig = plt.figure(figsize=(14, 5))
         for i in range(num_filter):
             axis = fig.add_subplot(num_filter/16, 16, i+1)
             axis.imshow(filter_imgs[i][0].reshape(48, 48), cmap='BuGn')

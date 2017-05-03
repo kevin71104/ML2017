@@ -30,7 +30,7 @@ train_feature = train_feature.reshape(train_feature.shape[0],48,48,1)
 
 model = load_model(sys.argv[1])
 input_img = model.input
-img_ids = [23,30,187,1933,2751, 15668]
+img_ids = [9,23,30,74,187,1111,1933,2751,4796,15668]
 
 for idx in img_ids:
     origin = train_feature[idx].reshape(48, 48)

@@ -35,17 +35,17 @@ def main():
     layer_dict = dict([layer.name, layer] for layer in emotion_classifier.layers[:])
 
     input_img = emotion_classifier.input
-    name_ls = ['conv2d_2','conv2d_3']
+    name_ls = ['conv2d_1','conv2d_2','conv2d_3']
     collect_layers = [ K.function([input_img, K.learning_phase()], [layer_dict[name].output]) for name in name_ls ]
 
-    choose_id = [9, 74, 1111, 5010]
+    choose_id = [9,23,30,74,187,1111,1933,2751,4796,15668]
     for idx in choose_id:
         print('Figure({})'.format(idx))
         photo = (train_feature[idx]/255).reshape(1,48,48,1)
         for cnt, fn in enumerate(collect_layers):
             im = fn([photo, 0]) #get the output of that layer
             fig = plt.figure(figsize=(14, 8))
-            nb_filter = im[0].shape[3]
+            nb_filter = int(int(im[0].shape[3])/16) * 16
             for i in range(nb_filter):
                 ax = fig.add_subplot(nb_filter/16, 16, i+1)
                 ax.imshow(im[0][0, :, :, i], cmap='BuGn')
