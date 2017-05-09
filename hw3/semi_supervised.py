@@ -147,13 +147,15 @@ save = ModelCheckpoint('model.h5', monitor='val_acc', verbose=0,
                        mode='auto', period=1)
 
 # store training info
-csv_logger = CSVLogger('{}.log'.format(sys.argv[2][:-3]), append = True)
+#csv_logger = CSVLogger('{}.log'.format(sys.argv[2][:-3]), append = True)
 
 ################################## Training ####################################
 batchNum = 100
 # training with data only
+'''model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
+              batch_size = batchNum, epochs = 10, callbacks=[save, csv_logger])'''
 model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
-              batch_size = batchNum, epochs = 10, callbacks=[save, csv_logger])
+              batch_size = batchNum, epochs = 10, callbacks=[save])
 
 # Image Preprocessing - add noise
 datagen = ImageDataGenerator(
@@ -164,13 +166,21 @@ datagen = ImageDataGenerator(
 # training with data and noise
 for i in range(10):
     # every flow has batchNum figures
-    model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
+    '''model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
                         steps_per_epoch = x_feature.shape[0]/batchNum,
                         epochs = 4,
                         validation_data = (valid_feature, valid_label),
                         callbacks=[save, csv_logger])
+
     model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
-              batch_size = batchNum, epochs = 2, callbacks=[save, csv_logger])
+              batch_size = batchNum, epochs = 2, callbacks=[save, csv_logger])'''
+    model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
+                        steps_per_epoch = x_feature.shape[0]/batchNum,
+                        epochs = 4,
+                        validation_data = (valid_feature, valid_label),
+                        callbacks=[save])
+    model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
+                  batch_size = batchNum, epochs = 10, callbacks=[save])
 
 ################################ Semi-Supervised ###############################
 for i in range(20):
@@ -188,13 +198,20 @@ for i in range(20):
             label = np_utils.to_categorical(label, classNum)
             x_label = np.concatenate((x_label, label), axis=0)
 
-    model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
+    '''model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
                         steps_per_epoch = x_feature.shape[0]/batchNum,
                         epochs = 4,
                         validation_data = (valid_feature, valid_label),
                         callbacks=[save, csv_logger])
     model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
-              batch_size = batchNum, epochs = 2, callbacks=[save, csv_logger])
+              batch_size = batchNum, epochs = 2, callbacks=[save, csv_logger])'''
+    model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
+                        steps_per_epoch = x_feature.shape[0]/batchNum,
+                        epochs = 4,
+                        validation_data = (valid_feature, valid_label),
+                        callbacks=[save])
+    model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
+                  batch_size = batchNum, epochs = 10, callbacks=[save])
 
 ######################## Record train/valid accuracy ###########################
 score = model.evaluate(x_feature, x_label)
