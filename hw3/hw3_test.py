@@ -24,14 +24,14 @@ test_feature = np.array(x, dtype=float)
 test_feature = test_feature/255
 test_feature = test_feature.reshape(test_feature.shape[0],48,48,1)
 
-model = load_model(sys.argv[2])
+model = load_model('model.h5')
 model.summary()
 #plot_model(model,to_file='{}.png'.format(sys.argv[2][:-3])) # plot model
 
 output = model.predict_classes(test_feature,batch_size=100,verbose=1)
 
 x = 0
-with open(sys.argv[3],'w') as csvFile:
+with open(sys.argv[2],'w') as csvFile:
     csvFile.write('id,label')
     for i in range(len(output)):
         csvFile.write('\n' + str(x) + ',' + str(output[i]))

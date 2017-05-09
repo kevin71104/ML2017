@@ -34,10 +34,14 @@ classNum = 7
 validNum = 5000
 unlabelNum = 5000
 randvalid = 0
+'''
 semi = int(sys.argv[3])
 test = (len(sys.argv) == 5)
 if len(sys.argv) == 5:
     testfile = sys.argv[4]
+'''
+semi = 1
+testfile = 'test.csv'
 
 ############################### validation Data ################################
 if semi == 1:
@@ -97,7 +101,7 @@ if semi == 1:
 ################################## CNN Model ###################################
 model = Sequential()
 
-model.add(Convolution2D(32,(3,3), input_shape=(48,48,1)))
+model.add(Convolution2D(64,(3,3), input_shape=(48,48,1)))
 model.add(Activation('relu'))
 model.add(BatchNormalization())
 model.add( MaxPooling2D(pool_size=(2, 2)) )
@@ -109,6 +113,11 @@ model.add(BatchNormalization())
 model.add( MaxPooling2D(pool_size=(2, 2)) )
 
 model.add(Flatten())
+
+model.add(Dropout(0.4))
+model.add(Dense(512))
+model.add(Activation('relu'))
+model.add(BatchNormalization())
 
 model.add(Dropout(0.4))
 model.add(Dense(512))
@@ -132,7 +141,7 @@ model.compile(loss='categorical_crossentropy', optimizer="adamax",
 
 ################################## Callbacks ###################################
 # save improved model only
-save = ModelCheckpoint(sys.argv[2], monitor='val_acc', verbose=0,
+save = ModelCheckpoint('model.h5', monitor='val_acc', verbose=0,
                        save_best_only = True, save_weights_only=False,
                        mode='auto', period=1)
 
@@ -143,7 +152,7 @@ csv_logger = CSVLogger('{}.log'.format(sys.argv[2][:-3]), append = True)
 batchNum = 100
 # training with data only
 model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
-              batch_size = batchNum, epochs = 4, callbacks=[save, csv_logger])
+              batch_size = batchNum, epochs = 10, callbacks=[save, csv_logger])
 
 # Image Preprocessing - add noise
 datagen = ImageDataGenerator(
@@ -152,7 +161,7 @@ datagen = ImageDataGenerator(
     height_shift_range=0.1)
 
 # training with data and noise
-for i in range(0):
+for i in range(10):
     # every flow has batchNum figures
     model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
                         steps_per_epoch = x_feature.shape[0]/batchNum,
@@ -163,7 +172,7 @@ for i in range(0):
               batch_size = batchNum, epochs = 2, callbacks=[save, csv_logger])
 
 ################################ Semi-Supervised ###############################
-for i in range(2):
+for i in range(20):
     if semi == 1:
         if (unlabel_feature.shape[0]):
             prob = model.predict(unlabel_feature)
@@ -180,11 +189,11 @@ for i in range(2):
 
     model.fit_generator(datagen.flow(x_feature, x_label, batch_size = batchNum),
                         steps_per_epoch = x_feature.shape[0]/batchNum,
-                        epochs = 2,
+                        epochs = 4,
                         validation_data = (valid_feature, valid_label),
                         callbacks=[save, csv_logger])
     model.fit(x_feature, x_label,validation_data=(valid_feature,valid_label),
-              batch_size = batchNum, epochs = 1, callbacks=[save, csv_logger])
+              batch_size = batchNum, epochs = 2, callbacks=[save, csv_logger])
 
 ######################## Record train/valid accuracy ###########################
 score = model.evaluate(x_feature, x_label)
