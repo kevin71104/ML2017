@@ -41,6 +41,7 @@ if len(sys.argv) == 5:
     testfile = sys.argv[4]
 '''
 semi = 1
+test = 1
 testfile = 'test.csv'
 
 ############################### validation Data ################################
