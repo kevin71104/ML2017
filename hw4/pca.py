@@ -40,7 +40,7 @@ for i in range(9):
 eigenface.suptitle('Eigenfaces')
 eigenface.savefig('eigenface.png')
 ################################### reconstruct ################################
-'''reducematrix = v[0:5,:]
+reducematrix = v[0:5,:]
 coefficient = np.dot(data_ctr,np.transpose(reducematrix)) # c_i,j = (data_i-mu) dot w_j
 recover = plt.figure(figsize=(20, 20))
 origin = plt.figure(figsize=(20, 20))
@@ -60,7 +60,7 @@ for i in range(100):
 recover.suptitle('Reconstruct',fontsize=36)
 recover.savefig('reconstruct.png')
 origin.suptitle('Original',fontsize=36)
-origin.savefig('original.png')'''
+origin.savefig('original.png')
 
 for k in range(1,v.shape[0]+1):
     RMSE = 0
