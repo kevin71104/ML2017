@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.linalg as li
 from sklearn.metrics.pairwise import euclidean_distances
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 def elu(arr):
     return np.where(arr > 0, arr, np.exp(arr) - 1)
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     maxdim = 60
     for i in range(1,maxdim+1):
         dim = i   # intrinsic dimension of i
-        N = 50000  # num data points
+        N = 10000  # num data points
         # the hidden dimension is randomly chosen from [60, 79] uniformly
         layer_dims = [np.random.randint(60, 80), 100]
         data = gen_data(dim, layer_dims, N)
@@ -61,8 +61,8 @@ if __name__ == '__main__':
     with open('stat.csv','w')as csvfile:
         csvfile.write(str(w[0])+','+str(w[1]))
 
-    fig = plt.figure()
+    '''fig = plt.figure()
     fig.suptitle('std-to-dim(N={})'.format(N))
     ax1 = fig.add_subplot(111)
     ax1.plot(x,stdlist)
-    fig.savefig('{}.png'.format(N))
+    fig.savefig('{}.png'.format(N))'''
