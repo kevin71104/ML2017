@@ -69,7 +69,6 @@ def fmeasure(y_true, y_pred):
     return fbeta_score(y_true, y_pred, beta=1)
 
 
-
 if __name__ == '__main__':
     record = False # record text/tag match info
 ################################ data reading ##################################
@@ -86,73 +85,97 @@ if __name__ == '__main__':
                         string = line[i],
                         count = 1)
                  for i in range(1, len(line))]
-
-################################ Preprocessing #################################
+    with open('test_data.csv','r') as f:
+        line = f.readlines()
+        test_texts = [re.sub(pattern = '\d+,',
+                        repl =  '',
+                        string = line[i],
+                        count = 1)
+                 for i in range(1, len(line))]
+    '''for i in range(len(texts+test_texts)):
+        print((texts+test_texts)[i])'''
+############################# Text Preprocessing ###############################
     tokenizer = Tokenizer(split = ' ')
-    # match word & sequence
-    tokenizer.fit_on_texts(texts)
-    # convert words into sequences and return list of sequences
-    text_sequences = tokenizer.texts_to_sequences(texts)
-    # return match of word and sequence in dict type
-    text_index = tokenizer.word_index
+    tokenizer.fit_on_texts(texts + test_texts) # match word & sequence
+    text_sequences = tokenizer.texts_to_sequences(texts) # convert words into sequences and return list of sequences
+    text_index = tokenizer.word_index # return match of word and sequence in dict type
+    test_seq = tokenizer.texts_to_sequences(test_texts)
     print('\n{} tokens in texts'.format(len(text_index)))
 
-    # padding sequences to equal length by adding leading 0s
-    x_train = pad_sequences(text_sequences)
-    print('\nShape of data: ', x_train.shape)
+    x_test = pad_sequences(test_seq, maxlen=313)
+    x_train = pad_sequences(text_sequences, maxlen=313)
 
+############################## Tag Preprocessing ###############################
     tokenizer_tags = Tokenizer(split = ' ',
                                lower = False,
                                filters = '!"#$%&()*+,./:;<=>?@[\\]^_`{|}~\t\n')
     tokenizer_tags.fit_on_texts(tags)
     tag_sequences = tokenizer_tags.texts_to_sequences(tags)
     tag_index = tokenizer_tags.word_index
+    y_train = MultiLabelBinarizer().fit_transform(tag_sequences)
+
+############################## Record Dictionary ###############################
     if record == True:
         from operator import itemgetter
         with open('category.csv','w') as csvfile:
-            tag_index = sorted(tag_index.items(), key=itemgetter(1))
-            for key in tag_index:
+            tagdict = sorted(tag_index.items(), key=itemgetter(1))
+            for key in tagdict:
                  csvfile.write(key[0] + ',' + str(key[1]))
                  csvfile.write('\n')
         with open('text_index.csv','w') as csvfile:
-            text_index = sorted(text_index.items(), key=itemgetter(1))
-            for key in text_index:
+            textdict = sorted(text_index.items(), key=itemgetter(1))
+            for key in textdict:
                  csvfile.write(key[0] + ',' + str(key[1]))
                  csvfile.write('\n')
 
-    y_train = MultiLabelBinarizer().fit_transform(tag_sequences)
-    print('\nShape of label: ', y_train.shape)
+############################## Embedding Layer #################################
+    EMBEDDING_DIM = 50
+
+    embeddings_index = {}
+    f = open('glove.6B.50d.txt','r')
+    for line in f:
+        values = line.split()
+        word = values[0]
+        coefs = np.asarray(values[1:], dtype='float32')
+        embeddings_index[word] = coefs
+    f.close()
+    print('Found %s word vectors.' % len(embeddings_index))
+
+    embedding_matrix = np.zeros((len(text_index) + 1, EMBEDDING_DIM))
+    for word, i in text_index.items():
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None:
+            # words not found in embedding index will be all-zeros.
+            embedding_matrix[i] = embedding_vector
 
 ################################# RNN model ####################################
     model = Sequential()
     # input size : (batch_size, sequence_length)
     # output size : (batch_size, sequence_length, output_dim)
     model.add(Embedding(input_dim = len(text_index)+1, # num of tokens
-                        output_dim = 256,
-                        input_length = x_train.shape[1]))
-    '''
-    model.add(LSTM(128,
-                   dropout = 0.2,
-                   recurrent_dropout = 0.2,
-                   return_sequences=True))
-    '''
-    model.add(LSTM(128,
-                   dropout = 0.2,
-                   recurrent_dropout = 0.2))
+                        output_dim = 50,
+                        weights=[embedding_matrix],
+                        input_length = x_train.shape[1],
+                        trainable=False))
+    model.add(GRU(50, dropout=0.2, recurrent_dropout=0.2, return_sequences=True))
+    model.add(GRU(50, dropout = 0.2, recurrent_dropout = 0.2))
     model.add(Dropout(0.25))
-    model.add(Dense(128, activation = 'relu'))
+    model.add(Dense(256, activation = 'elu'))
     model.add(Dropout(0.25))
-    model.add(Dense(256, activation = 'relu'))
+    model.add(Dense(512, activation = 'elu'))
     model.add(Dropout(0.25))
     model.add(Dense(38, activation = 'sigmoid'))
 
     model.summary()
+    model.compile(loss='categorical_crossentropy', metrics=[fmeasure], optimizer='RMSprop')
 
-    adamax = Adamax(lr = 0.002, beta_1 = 0.9, beta_2 = 0.999, epsilon = 1e-08, decay = 0.0)
-    model.compile(loss = 'binary_crossentropy', metrics = [fmeasure,precision,recall], optimizer = 'SGD')
-
-    save = ModelCheckpoint('model.h5', monitor='val_acc', verbose=0,
+    save = ModelCheckpoint('model.h5', monitor='val_fmeasure', verbose=0,
                            save_best_only = True, save_weights_only=False,
                            mode='auto', period=1)
 
-    model.fit(x_train, y_train, batch_size = 128,epochs = 15, validation_split = 0.2, callbacks=[save])
+    model.fit(x_train, y_train, batch_size = 128,epochs = 40, validation_split = 0.2, callbacks=[save])
+
+    output = model.predict(x_train, batch_size = 128, verbose = 1)
+
+    for i in range(10):
+        print(output[i])
