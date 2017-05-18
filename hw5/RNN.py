@@ -1,5 +1,7 @@
 import numpy as np
 import re
+import csv
+import sys
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
@@ -9,7 +11,8 @@ from keras.layers.recurrent import GRU, LSTM
 from keras.layers.embeddings import Embedding
 from keras.optimizers import Adamax, SGD, Adam, Adadelta
 from keras import backend as K
-from keras.callbacks import CSVLogger, ModelCheckpoint
+from keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
+from keras.models import load_model
 from sklearn.preprocessing import MultiLabelBinarizer
 
 def precision(y_true, y_pred):
@@ -66,11 +69,16 @@ def fmeasure(y_true, y_pred):
     """Computes the f-measure, the harmonic mean of precision and recall.
     Here it is only computed as a batch-wise average, not globally.
     """
+    #thresh = 0.9
+    #y_pred = K.cast(K.greater(y_pred,thresh),dtype='float32')
     return fbeta_score(y_true, y_pred, beta=1)
 
-
+############################### main function ##################################
 if __name__ == '__main__':
     record = False # record text/tag match info
+    TextLength = 300
+    EMBEDDING_DIM = 100
+    Valid_split = 0.2
 ################################ data reading ##################################
     with open('train_data.csv','r') as f:
         line = f.readlines()
@@ -92,27 +100,48 @@ if __name__ == '__main__':
                         string = line[i],
                         count = 1)
                  for i in range(1, len(line))]
-    '''for i in range(len(texts+test_texts)):
-        print((texts+test_texts)[i])'''
 ############################# Text Preprocessing ###############################
     tokenizer = Tokenizer(split = ' ')
     tokenizer.fit_on_texts(texts + test_texts) # match word & sequence
-    text_sequences = tokenizer.texts_to_sequences(texts) # convert words into sequences and return list of sequences
     text_index = tokenizer.word_index # return match of word and sequence in dict type
+    text_sequences = tokenizer.texts_to_sequences(texts) # convert words into sequences and return list of sequences
     test_seq = tokenizer.texts_to_sequences(test_texts)
     print('\n{} tokens in texts'.format(len(text_index)))
 
-    x_test = pad_sequences(test_seq, maxlen=313)
-    x_train = pad_sequences(text_sequences, maxlen=313)
+    x_test = pad_sequences(test_seq, maxlen = TextLength)
+    traintemp = pad_sequences(text_sequences, maxlen = TextLength)
+    validnum = int(Valid_split * traintemp.shape[0])
+    x_val = traintemp[:validnum]
+    x_train = traintemp[validnum:]
 
 ############################## Tag Preprocessing ###############################
-    tokenizer_tags = Tokenizer(split = ' ',
+    '''tokenizer_tags = Tokenizer(split = ' ',
                                lower = False,
                                filters = '!"#$%&()*+,./:;<=>?@[\\]^_`{|}~\t\n')
     tokenizer_tags.fit_on_texts(tags)
     tag_sequences = tokenizer_tags.texts_to_sequences(tags)
-    tag_index = tokenizer_tags.word_index
-    y_train = MultiLabelBinarizer().fit_transform(tag_sequences)
+    tag_index = tokenizer_tags.word_index'''
+
+    category = []
+    label = []
+    with open('label_mapping.csv','r') as f:
+        for row in csv.reader(f):
+            category.append(row[0])
+            label.append(int(row[1]))
+    tagDict = {category[i] : label[i] for i in range(38)}
+    #print(tagDict)
+    for i in range(len(tags)):
+        tags[i] = tags[i].split(' ')
+
+    tag_sequences = []
+    for i in range(len(tags)):
+        seq = [ tagDict[j] for j in tags[i]]
+        tag_sequences.append(seq)
+    tag_sequences = np.array(tag_sequences)
+
+    tagtemp = MultiLabelBinarizer().fit_transform(tag_sequences)
+    y_val = tagtemp[:validnum]
+    y_train = tagtemp[validnum:]
 
 ############################## Record Dictionary ###############################
     if record == True:
@@ -129,17 +158,15 @@ if __name__ == '__main__':
                  csvfile.write('\n')
 
 ############################## Embedding Layer #################################
-    EMBEDDING_DIM = 50
-
     embeddings_index = {}
-    f = open('glove.6B.50d.txt','r')
+    f = open('glove.6B.%dd.txt'%EMBEDDING_DIM,'r')
     for line in f:
         values = line.split()
         word = values[0]
         coefs = np.asarray(values[1:], dtype='float32')
         embeddings_index[word] = coefs
     f.close()
-    print('Found %s word vectors.' % len(embeddings_index))
+    print('using glove with dimension(%d)' %EMBEDDING_DIM)
 
     embedding_matrix = np.zeros((len(text_index) + 1, EMBEDDING_DIM))
     for word, i in text_index.items():
@@ -153,29 +180,46 @@ if __name__ == '__main__':
     # input size : (batch_size, sequence_length)
     # output size : (batch_size, sequence_length, output_dim)
     model.add(Embedding(input_dim = len(text_index)+1, # num of tokens
-                        output_dim = 50,
+                        output_dim = EMBEDDING_DIM,
                         weights=[embedding_matrix],
                         input_length = x_train.shape[1],
                         trainable=False))
-    model.add(GRU(50, dropout=0.2, recurrent_dropout=0.2, return_sequences=True))
-    model.add(GRU(50, dropout = 0.2, recurrent_dropout = 0.2))
-    model.add(Dropout(0.25))
-    model.add(Dense(256, activation = 'elu'))
-    model.add(Dropout(0.25))
-    model.add(Dense(512, activation = 'elu'))
-    model.add(Dropout(0.25))
-    model.add(Dense(38, activation = 'sigmoid'))
 
+    model.add(GRU(128,activation='tanh',dropout=0.1))
+    model.add(Dense(256,activation='relu'))
+    model.add(Dropout(0.1))
+    model.add(Dense(128,activation='relu'))
+    model.add(Dropout(0.1))
+    model.add(Dense(64,activation='relu'))
+    model.add(Dropout(0.1))
+    model.add(Dense(38,activation='sigmoid'))
     model.summary()
-    model.compile(loss='categorical_crossentropy', metrics=[fmeasure], optimizer='RMSprop')
 
-    save = ModelCheckpoint('model.h5', monitor='val_fmeasure', verbose=0,
+    adam = Adam(lr=0.001,decay=1e-6,clipvalue=0.5)
+    model.compile(loss='categorical_crossentropy',
+                  metrics=[fmeasure],
+                  optimizer=adam)
+
+    es = EarlyStopping(monitor='val_fmeasure', patience = 20, verbose=1, mode='max')
+    save = ModelCheckpoint(sys.argv[1], monitor='val_fmeasure', verbose=1,
                            save_best_only = True, save_weights_only=False,
-                           mode='auto', period=1)
+                           mode='max', period=1)
 
-    model.fit(x_train, y_train, batch_size = 128,epochs = 40, validation_split = 0.2, callbacks=[save])
+    model.fit(x_train, y_train,
+              validation_data=(x_val, y_val),
+              batch_size = 128,
+              epochs = 500,
+              callbacks=[save,es])
+              
+################################## predict #####################################
+    bestmodel = load_model(sys.argv[1])
+    y_test = bestmodel.predict(x_test, batch_size = 128)
 
-    output = model.predict(x_train, batch_size = 128, verbose = 1)
-
-    for i in range(10):
-        print(output[i])
+    thresh = 0.4
+    with open(sys.argv[2],'w') as output:
+        output.write('\"id\",\"tags\"\n')
+        y_test_thresh = (y_test > thresh).astype('int')
+        for index,labels in enumerate(y_test_thresh):
+            labels = [category[i] for i,value in enumerate(labels) if value==1 ]
+            labels_original = ' '.join(labels)
+            output.write('\"%d\",\"%s\"\n'%(index,labels_original))
