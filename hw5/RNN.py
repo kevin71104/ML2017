@@ -41,7 +41,6 @@ args = parser.parse_args()
 if args.categorical:
     print("use categorical_crossentropy")
     LOSS = 'categorical_crossentropy'
-
 elif args.binary:
     print('use binary_crossentropy')
     LOSS = 'binary_crossentropy'
@@ -55,7 +54,7 @@ modelfile = os.path.join(MODEL_DIR,args.model)
 record = False # record text/tag match info
 TextLength = 300
 EMBEDDING_DIM = 200
-Valid_split = 0.2
+Valid_split = 0.1
 BATCHNUM = 100
 
 def precision(y_true, y_pred):
@@ -222,8 +221,7 @@ if __name__ == '__main__':
                         input_length = x_train.shape[1],
                         trainable=False))
 
-    model.add(GRU(256, dropout=0.5,
-                  recurrent_dropout=0.5, return_sequences=True))
+    model.add(GRU(256, dropout=0.5, recurrent_dropout=0.5, return_sequences=True))
     model.add(GRU(256, dropout=0.5, recurrent_dropout=0.5))
     model.add(Dense(256,activation='elu'))
     model.add(Dropout(0.5))
