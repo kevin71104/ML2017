@@ -1,7 +1,14 @@
+################################################################################
+#                            Machine Learning 2017                             #
+#                           Hw5 : Multi-label text                             #
+#                          Recurrent Neural Network                            #
+#   python3 RNN.py <-cat | -bin> <-o filename> <-m filename> <-t threshold>    #
+################################################################################
 import numpy as np
 import re
 import csv
-import sys
+import os
+import argparse
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
@@ -9,11 +16,47 @@ from keras.layers import Dense, Activation
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.recurrent import GRU, LSTM
 from keras.layers.embeddings import Embedding
-from keras.optimizers import Adamax, SGD, Adam, Adadelta
+from keras.optimizers import Adamax, SGD, Adam, Adadelta, RMSprop
 from keras import backend as K
 from keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
 from keras.models import load_model
 from sklearn.preprocessing import MultiLabelBinarizer
+
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+GLOVE_DIR = os.path.join(BASE_DIR, 'glove')
+MODEL_DIR = os.path.join(BASE_DIR, 'model')
+if not os.path.exists(MODEL_DIR):
+    os.makedirs(MODEL_DIR)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-cat","--categorical", help="use categorical_crossentropy",
+                    action="store_true")
+parser.add_argument("-bin","--binary", help="use binary_crossentropy",
+                    action="store_true")
+parser.add_argument("-o","--output", help="output filename")
+parser.add_argument("-t","--threshold", help="predict threshold", type=float)
+parser.add_argument("-m","--model", help="model filename")
+
+args = parser.parse_args()
+if args.categorical:
+    print("use categorical_crossentropy")
+    LOSS = 'categorical_crossentropy'
+
+elif args.binary:
+    print('use binary_crossentropy')
+    LOSS = 'binary_crossentropy'
+
+if args.threshold:
+    THRESHOLD = args.threshold
+else:
+    THRESHOLD = 0.5
+
+modelfile = os.path.join(MODEL_DIR,args.model)
+record = False # record text/tag match info
+TextLength = 300
+EMBEDDING_DIM = 200
+Valid_split = 0.2
+BATCHNUM = 100
 
 def precision(y_true, y_pred):
     """Precision metric.
@@ -75,12 +118,9 @@ def fmeasure(y_true, y_pred):
 
 ############################### main function ##################################
 if __name__ == '__main__':
-    record = False # record text/tag match info
-    TextLength = 300
-    EMBEDDING_DIM = 100
-    Valid_split = 0.2
-################################ data reading ##################################
-    with open('train_data.csv','r') as f:
+    ############################## data reading ################################
+    trainfile = os.path.join(BASE_DIR, "train_data.csv")
+    with open(trainfile,'r') as f:
         line = f.readlines()
         # . : any character w/o newline
         # * : match 0 or more repetitions of the preceding RE
@@ -93,20 +133,21 @@ if __name__ == '__main__':
                         string = line[i],
                         count = 1)
                  for i in range(1, len(line))]
-    with open('test_data.csv','r') as f:
+    testfile = os.path.join(BASE_DIR, "test_data.csv")
+    with open(testfile,'r') as f:
         line = f.readlines()
         test_texts = [re.sub(pattern = '\d+,',
                         repl =  '',
                         string = line[i],
                         count = 1)
                  for i in range(1, len(line))]
-############################# Text Preprocessing ###############################
+    ########################### Text Preprocessing #############################
     tokenizer = Tokenizer(split = ' ')
     tokenizer.fit_on_texts(texts + test_texts) # match word & sequence
     text_index = tokenizer.word_index # return match of word and sequence in dict type
     text_sequences = tokenizer.texts_to_sequences(texts) # convert words into sequences and return list of sequences
     test_seq = tokenizer.texts_to_sequences(test_texts)
-    print('\n{} tokens in texts'.format(len(text_index)))
+    print('{} tokens in texts'.format(len(text_index)))
 
     x_test = pad_sequences(test_seq, maxlen = TextLength)
     traintemp = pad_sequences(text_sequences, maxlen = TextLength)
@@ -114,7 +155,7 @@ if __name__ == '__main__':
     x_val = traintemp[:validnum]
     x_train = traintemp[validnum:]
 
-############################## Tag Preprocessing ###############################
+    ############################ Tag Preprocessing #############################
     '''tokenizer_tags = Tokenizer(split = ' ',
                                lower = False,
                                filters = '!"#$%&()*+,./:;<=>?@[\\]^_`{|}~\t\n')
@@ -143,23 +184,19 @@ if __name__ == '__main__':
     y_val = tagtemp[:validnum]
     y_train = tagtemp[validnum:]
 
-############################## Record Dictionary ###############################
+    ############################ Record Dictionary #############################
     if record == True:
         from operator import itemgetter
-        with open('category.csv','w') as csvfile:
-            tagdict = sorted(tag_index.items(), key=itemgetter(1))
-            for key in tagdict:
-                 csvfile.write(key[0] + ',' + str(key[1]))
-                 csvfile.write('\n')
         with open('text_index.csv','w') as csvfile:
             textdict = sorted(text_index.items(), key=itemgetter(1))
             for key in textdict:
                  csvfile.write(key[0] + ',' + str(key[1]))
                  csvfile.write('\n')
 
-############################## Embedding Layer #################################
+    ############################ Embedding Layer ###############################
     embeddings_index = {}
-    f = open('glove.6B.%dd.txt'%EMBEDDING_DIM,'r')
+    glovefile = os.path.join(GLOVE_DIR, "glove.6B.%dd.txt" %EMBEDDING_DIM)
+    f = open(glovefile,'r')
     for line in f:
         values = line.split()
         word = values[0]
@@ -175,7 +212,7 @@ if __name__ == '__main__':
             # words not found in embedding index will be all-zeros.
             embedding_matrix[i] = embedding_vector
 
-################################# RNN model ####################################
+    ############################### RNN model ##################################
     model = Sequential()
     # input size : (batch_size, sequence_length)
     # output size : (batch_size, sequence_length, output_dim)
@@ -185,38 +222,50 @@ if __name__ == '__main__':
                         input_length = x_train.shape[1],
                         trainable=False))
 
-    model.add(GRU(128,activation='tanh',dropout=0.1))
-    model.add(Dense(256,activation='relu'))
-    model.add(Dropout(0.1))
-    model.add(Dense(128,activation='relu'))
-    model.add(Dropout(0.1))
-    model.add(Dense(64,activation='relu'))
-    model.add(Dropout(0.1))
+    model.add(GRU(256, dropout=0.5,
+                  recurrent_dropout=0.5, return_sequences=True))
+    model.add(GRU(256, dropout=0.5, recurrent_dropout=0.5))
+    model.add(Dense(256,activation='elu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(128,activation='elu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(64,activation='elu'))
+    model.add(Dropout(0.5))
     model.add(Dense(38,activation='sigmoid'))
     model.summary()
 
     adam = Adam(lr=0.001,decay=1e-6,clipvalue=0.5)
-    model.compile(loss='categorical_crossentropy',
+    rmsprop = RMSprop(lr=0.001)
+    model.compile(loss=LOSS,
                   metrics=[fmeasure],
-                  optimizer=adam)
+                  optimizer=rmsprop)
 
-    es = EarlyStopping(monitor='val_fmeasure', patience = 20, verbose=1, mode='max')
-    save = ModelCheckpoint(sys.argv[1], monitor='val_fmeasure', verbose=1,
-                           save_best_only = True, save_weights_only=False,
-                           mode='max', period=1)
+    es = EarlyStopping(monitor='val_fmeasure',
+                       patience = 10,
+                       verbose=1,
+                       mode='max')
+
+    save = ModelCheckpoint(modelfile,
+                           monitor='val_fmeasure',
+                           verbose=1,
+                           save_best_only = True,
+                           save_weights_only = True,
+                           mode='max',
+                           period=1)
 
     model.fit(x_train, y_train,
               validation_data=(x_val, y_val),
-              batch_size = 128,
-              epochs = 500,
+              batch_size = BATCHNUM,
+              epochs = 300,
               callbacks=[save,es])
-              
-################################## predict #####################################
-    bestmodel = load_model(sys.argv[1])
-    y_test = bestmodel.predict(x_test, batch_size = 128)
 
-    thresh = 0.4
-    with open(sys.argv[2],'w') as output:
+    ################################ predict ###################################
+    model.load_weights(modelfile)
+    y_test = model.predict(x_test, batch_size = BATCHNUM)
+    for i in range(10):
+        print(y_test[i])
+    thresh = THRESHOLD
+    with open(args.output,'w') as output:
         output.write('\"id\",\"tags\"\n')
         y_test_thresh = (y_test > thresh).astype('int')
         for index,labels in enumerate(y_test_thresh):
