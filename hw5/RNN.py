@@ -132,6 +132,10 @@ if __name__ == '__main__':
                         string = line[i],
                         count = 1)
                  for i in range(1, len(line))]
+        '''with open('trainlabel.csv','w') as f:
+            f.write('id,tags\n')
+            for i,row in enumerate(tags):
+                f.write('\"%d\",\"%s\"\n'%(i,row))'''
     testfile = os.path.join(BASE_DIR, "test_data.csv")
     with open(testfile,'r') as f:
         line = f.readlines()
@@ -139,7 +143,7 @@ if __name__ == '__main__':
                         repl =  '',
                         string = line[i],
                         count = 1)
-                 for i in range(1, len(line))]
+                      for i in range(1, len(line))]
     ########################### Text Preprocessing #############################
     tokenizer = Tokenizer(split = ' ')
     tokenizer.fit_on_texts(texts + test_texts) # match word & sequence
