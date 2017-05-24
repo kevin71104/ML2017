@@ -9,7 +9,7 @@ import re
 import csv
 import os
 import argparse
-from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.text import Tokenizer, text_to_word_sequence
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
 from keras.layers import Dense, Activation
@@ -22,11 +22,15 @@ from keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
 from keras.models import load_model
 from sklearn.preprocessing import MultiLabelBinarizer
 
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR  = os.path.dirname(os.path.realpath(__file__))
 GLOVE_DIR = os.path.join(BASE_DIR, 'glove')
 MODEL_DIR = os.path.join(BASE_DIR, 'model')
+DATA_DIR  = os.path.join(BASE_DIR, 'data')
+PRED_DIR  = os.path.join(BASE_DIR, 'prediction')
 if not os.path.exists(MODEL_DIR):
     os.makedirs(MODEL_DIR)
+if not os.path.exists(PRED_DIR):
+    os.makedirs(PRED_DIR)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-cat","--categorical", help="use categorical_crossentropy",
@@ -50,7 +54,6 @@ if args.threshold:
 else:
     THRESHOLD = 0.5
 
-modelfile = os.path.join(MODEL_DIR,args.model)
 record = False # record text/tag match info
 TextLength = 300
 EMBEDDING_DIM = 200
@@ -118,7 +121,7 @@ def fmeasure(y_true, y_pred):
 ############################### main function ##################################
 if __name__ == '__main__':
     ############################## data reading ################################
-    trainfile = os.path.join(BASE_DIR, "train_data.csv")
+    trainfile = os.path.join(DATA_DIR, "train_data.csv")
     with open(trainfile,'r') as f:
         line = f.readlines()
         # . : any character w/o newline
@@ -132,48 +135,76 @@ if __name__ == '__main__':
                         string = line[i],
                         count = 1)
                  for i in range(1, len(line))]
-        '''with open('trainlabel.csv','w') as f:
+        train = [text_to_word_sequence(row, lower=True, split=" ")
+                 for row in texts]
+        '''# Record train data id/tags pair
+        with open('trainlabel.csv','w') as f:
             f.write('id,tags\n')
             for i,row in enumerate(tags):
                 f.write('\"%d\",\"%s\"\n'%(i,row))'''
-    testfile = os.path.join(BASE_DIR, "test_data.csv")
+
+    testfile = os.path.join(DATA_DIR, "test_data.csv")
     with open(testfile,'r') as f:
         line = f.readlines()
-        test_texts = [re.sub(pattern = '\d+,',
+        texts = [re.sub(pattern = '\d+,',
                         repl =  '',
                         string = line[i],
                         count = 1)
                       for i in range(1, len(line))]
-    ########################### Text Preprocessing #############################
-    tokenizer = Tokenizer(split = ' ')
-    tokenizer.fit_on_texts(texts + test_texts) # match word & sequence
-    text_index = tokenizer.word_index # return match of word and sequence in dict type
-    text_sequences = tokenizer.texts_to_sequences(texts) # convert words into sequences and return list of sequences
-    test_seq = tokenizer.texts_to_sequences(test_texts)
-    print('{} tokens in texts'.format(len(text_index)))
+        test = [text_to_word_sequence(row, lower=True, split=" ")
+                for row in texts]
 
-    x_test = pad_sequences(test_seq, maxlen = TextLength)
-    traintemp = pad_sequences(text_sequences, maxlen = TextLength)
+    ################### First Time Record TextDict TagDict #####################
+    if record == True:
+        tokenizer = Tokenizer(split = ' ')
+        tokenizer.fit_on_texts(texts + test_texts) # match word & sequence
+        text_index = tokenizer.word_index # return match of word and sequence in dict type
+        text_sequences = tokenizer.texts_to_sequences(texts) # convert words into sequences and return list of sequences
+        test_seq = tokenizer.texts_to_sequences(test_texts)
+        print('{} tokens in texts'.format(len(text_index)))
+
+        tokenizer_tags = Tokenizer(split = ' ',
+                                   lower = False,
+                                   filters = '!"#$%&()*+,./:;<=>?@[\\]^_`{|}~\t\n')
+        tokenizer_tags.fit_on_texts(tags)
+        tag_sequences = tokenizer_tags.texts_to_sequences(tags)
+        tag_index = tokenizer_tags.word_index
+
+        from operator import itemgetter
+        with open('text_index.csv','w') as csvfile:
+            textdict = sorted(text_index.items(), key=itemgetter(1))
+            for key in textdict:
+                 csvfile.write(key[0] + ',' + str(key[1]))
+                 csvfile.write('\n')
+
+    ########################### Text Preprocessing #############################
+    text = []
+    label = []
+    with open(os.path.join(DATA_DIR, "text_index.csv"),'r') as f:
+        for row in csv.DictReader(f):
+            text.append(row['text'])
+            label.append(int(row['label']))
+    textDict = {text[i] : label[i] for i in range(len(text))}
+
+    train_seq = [[textDict[entry] for entry in row ] for row in train]
+    test_seq  = [[textDict[entry] for entry in row ] for row in test]
+
+    x_test    = pad_sequences(test_seq,  maxlen = TextLength)
+    traintemp = pad_sequences(train_seq, maxlen = TextLength)
+
     validnum = int(Valid_split * traintemp.shape[0])
-    x_val = traintemp[:validnum]
+    x_val   = traintemp[:validnum]
     x_train = traintemp[validnum:]
 
     ############################ Tag Preprocessing #############################
-    '''tokenizer_tags = Tokenizer(split = ' ',
-                               lower = False,
-                               filters = '!"#$%&()*+,./:;<=>?@[\\]^_`{|}~\t\n')
-    tokenizer_tags.fit_on_texts(tags)
-    tag_sequences = tokenizer_tags.texts_to_sequences(tags)
-    tag_index = tokenizer_tags.word_index'''
-
     category = []
     label = []
-    with open('label_mapping.csv','r') as f:
+    with open(os.path.join(DATA_DIR, "label_mapping.csv"),'r') as f:
         for row in csv.reader(f):
             category.append(row[0])
             label.append(int(row[1]))
     tagDict = {category[i] : label[i] for i in range(38)}
-    #print(tagDict)
+
     for i in range(len(tags)):
         tags[i] = tags[i].split(' ')
 
@@ -187,15 +218,6 @@ if __name__ == '__main__':
     y_val = tagtemp[:validnum]
     y_train = tagtemp[validnum:]
 
-    ############################ Record Dictionary #############################
-    if record == True:
-        from operator import itemgetter
-        with open('text_index.csv','w') as csvfile:
-            textdict = sorted(text_index.items(), key=itemgetter(1))
-            for key in textdict:
-                 csvfile.write(key[0] + ',' + str(key[1]))
-                 csvfile.write('\n')
-
     ############################ Embedding Layer ###############################
     embeddings_index = {}
     glovefile = os.path.join(GLOVE_DIR, "glove.6B.%dd.txt" %EMBEDDING_DIM)
@@ -208,8 +230,8 @@ if __name__ == '__main__':
     f.close()
     print('using glove with dimension(%d)' %EMBEDDING_DIM)
 
-    embedding_matrix = np.zeros((len(text_index) + 1, EMBEDDING_DIM))
-    for word, i in text_index.items():
+    embedding_matrix = np.zeros((len(textDict) + 1, EMBEDDING_DIM))
+    for word, i in textDict.items():
         embedding_vector = embeddings_index.get(word)
         if embedding_vector is not None:
             # words not found in embedding index will be all-zeros.
@@ -219,7 +241,7 @@ if __name__ == '__main__':
     model = Sequential()
     # input size : (batch_size, sequence_length)
     # output size : (batch_size, sequence_length, output_dim)
-    model.add(Embedding(input_dim = len(text_index)+1, # num of tokens
+    model.add(Embedding(input_dim = len(textDict)+1, # num of tokens
                         output_dim = EMBEDDING_DIM,
                         weights=[embedding_matrix],
                         input_length = x_train.shape[1],
@@ -247,6 +269,7 @@ if __name__ == '__main__':
                        verbose=1,
                        mode='max')
 
+    modelfile = os.path.join(MODEL_DIR,args.model)
     save = ModelCheckpoint(modelfile,
                            monitor='val_fmeasure',
                            verbose=1,
@@ -261,16 +284,20 @@ if __name__ == '__main__':
               epochs = 300,
               callbacks=[save,es])
 
+    '''
     ################################ predict ###################################
     model.load_weights(modelfile)
     y_test = model.predict(x_test, batch_size = BATCHNUM)
     for i in range(10):
         print(y_test[i])
     thresh = THRESHOLD
-    with open(args.output,'w') as output:
+
+    outputfile = os.path.join(PRED_DIR,args.output)
+    with open(outputfile,'w') as output:
         output.write('\"id\",\"tags\"\n')
         y_test_thresh = (y_test > thresh).astype('int')
         for index,labels in enumerate(y_test_thresh):
             labels = [category[i] for i,value in enumerate(labels) if value==1 ]
             labels_original = ' '.join(labels)
             output.write('\"%d\",\"%s\"\n'%(index,labels_original))
+    '''

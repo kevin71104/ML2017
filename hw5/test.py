@@ -25,12 +25,12 @@ MODEL_DIR = os.path.join(BASE_DIR, 'model')
 parser = argparse.ArgumentParser()
 parser.add_argument("-v","--validation", help="check validation set",
                     action="store_true")
+parser.add_argument("-i","--input",  help="input filename")
 parser.add_argument("-o","--output", help="output filename")
-parser.add_argument("-m","--model", help="model filename")
+parser.add_argument("-m","--model",  help="model filename")
 args = parser.parse_args()
 
 ############################## Parameter Setting ###############################
-modelfile = os.path.join(MODEL_DIR,args.model)
 TextLength = 300
 EMBEDDING_DIM = 200
 BATCHNUM = 100
@@ -39,7 +39,8 @@ Valid_split = 0.1
 
 ################################## Test Data ###################################
 if args.validation:
-    testfile = os.path.join(BASE_DIR, "train_data.csv")
+    #testfile = os.path.join(BASE_DIR, "train_data.csv")
+    testfile = args.input
     with open(testfile,'r') as f:
         line = f.readlines()
         test_texts = [re.sub(pattern = '\d+,\"(.*?)\",',
@@ -54,7 +55,8 @@ if args.validation:
             for row in test_texts]
 
 else:
-    testfile = os.path.join(BASE_DIR, "test_data.csv")
+    #testfile = os.path.join(BASE_DIR, "test_data.csv")
+    testfile = args.input
     with open(testfile,'r') as f:
         line = f.readlines()
         test_texts = [re.sub(pattern = '\d+,',
@@ -104,6 +106,8 @@ model.add(Dense(64,activation='elu'))
 model.add(Dropout(0.5))
 model.add(Dense(38,activation='sigmoid'))
 model.summary()
+
+modelfile = os.path.join(MODEL_DIR,args.model)
 model.load_weights(modelfile)
 
 ############################# Predict and Record ###############################
@@ -111,7 +115,10 @@ y_test = model.predict(x_test, batch_size = BATCHNUM, verbose = 1)
 for i in range(10):
     print(y_test[i])
 thresh = THRESHOLD
-with open(args.output,'w') as output:
+
+#outputfile = os.path.join(BASE_DIR,args.output)
+outputfile = args.output
+with open(outputfile,'w') as output:
     output.write('\"id\",\"tags\"\n')
     y_test_thresh = (y_test > thresh).astype('int')
     for index,labels in enumerate(y_test_thresh):
