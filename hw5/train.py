@@ -2,7 +2,7 @@
 #                            Machine Learning 2017                             #
 #                           Hw5 : Multi-label text                             #
 #                          Recurrent Neural Network                            #
-#   python3 RNN.py <-cat | -bin> <-o filename> <-m filename> <-t threshold>    #
+#   python3 RNN.py <-cat | -bin> <-o filename> <-m filename>                   #
 ################################################################################
 import numpy as np
 import re
@@ -16,6 +16,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.recurrent import GRU
 from keras.layers.embeddings import Embedding
+from keras.layers.wrappers import Bidirectional
 from keras.optimizers import Adamax, SGD, Adam, Adadelta, RMSprop
 from keras import backend as K
 from keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
@@ -41,19 +42,14 @@ parser.add_argument("-b","--bag", help="use bag of words",
                     action="store_true")
 parser.add_argument("-r","--record", help="first time",
                     action="store_true")
-parser.add_argument("-t","--threshold", help="predict threshold", type=float)
 parser.add_argument("-m","--model", help="model filename")
 
 args = parser.parse_args()
 
-if args.threshold:
-    THRESHOLD = args.threshold
-else:
-    THRESHOLD = 0.5
-
 TextLength = 300
 EMBEDDING_DIM = 200
 Valid_split = 0.1
+TRAIN_SPLIT = 0.5
 BATCHNUM = 100
 DROPOUT_RATE = 0.5
 
@@ -111,8 +107,9 @@ def fmeasure(y_true, y_pred):
     """Computes the f-measure, the harmonic mean of precision and recall.
     Here it is only computed as a batch-wise average, not globally.
     """
-    #thresh = 0.9
-    #y_pred = K.cast(K.greater(y_pred,thresh),dtype='float32')
+    thresh = np.ones(38)*0.55
+    thresh[0] = 0.9
+    y_pred = K.cast(K.greater(y_pred,thresh),dtype='float32')
     return fbeta_score(y_true, y_pred, beta=1)
 
 ############################### main function ##################################
@@ -185,6 +182,7 @@ if __name__ == '__main__':
         traintemp = pad_sequences(train_seq, maxlen = TextLength)
 
     validnum = int(Valid_split * traintemp.shape[0])
+    trainnum = int((Valid_split + TRAIN_SPLIT)* traintemp.shape[0])
     x_val   = traintemp[:validnum]
     x_train = traintemp[validnum:]
 
@@ -257,13 +255,18 @@ if __name__ == '__main__':
                             input_length = x_train.shape[1],
                             trainable=False))
 
+        '''model.add(Bidirectional(GRU(128, dropout = DROPOUT_RATE,
+                                    recurrent_dropout=0.5,
+                                    return_sequences=True)))
+        model.add(Bidirectional(GRU(128, dropout = DROPOUT_RATE,
+                                    recurrent_dropout=0.5)))'''
         model.add(GRU(256, dropout=0.5, recurrent_dropout=0.5, return_sequences=True))
-        model.add(GRU(256, dropout=0.5, recurrent_dropout=0.5))
+        model.add(GRU(64, dropout=0.5, recurrent_dropout=0.5))
         model.add(Dense(256,activation='elu'))
         model.add(Dropout(0.5))
         model.add(Dense(128,activation='elu'))
         model.add(Dropout(0.5))
-        model.add(Dense(128,activation='elu'))
+        model.add(Dense(64,activation='elu'))
         model.add(Dropout(0.5))
         model.add(Dense(38,activation='sigmoid'))
 
@@ -284,7 +287,7 @@ if __name__ == '__main__':
                            monitor='val_fmeasure',
                            verbose=1,
                            save_best_only = True,
-                           save_weights_only = True,
+                           save_weights_only = False,
                            mode='max',
                            period=1)
 
