@@ -201,7 +201,7 @@ if args.vote:
     thresh = np.ones(38)*THRESHOLD
     thresh[0] = 0.9
     #submodel = [ '2biGRU.h5','1biGRU.h5','cat14.h5','cat15.h5','cat16.h5']
-    submodel = [ 'cat9.h5','cat14.h5','cat15.h5','cat16.h5']
+    submodel = [ 'cat9.h5','cat14.h5','cat15.h5','cat16.h5','cat17.h5','cat18.h5','cat19.h5']
     pre_tests = []
     for i, index in enumerate(submodel):
         modelfile = './model/%s'%index
@@ -223,12 +223,14 @@ if args.vote:
 
     y_test = np.sum(pre_tests, axis=0)
     print(y_test.shape)
-    for row in y_test:
-        print(row[0], end = ', ')
-    vote = np.ones(38)*len(submodel)/2
+    '''for row in y_test:
+        print(row[0], end = ', ')'''
+    vote = len(submodel)/2
+    print('\nvote threshold: %f'%vote)
     y_final = (y_test >= vote).astype('int')
 else:
-    thresh = 0.55
+    thresh = np.ones(38)*THRESHOLD
+    thresh[0] = 0.9
     model = load_model('./model/cat16.h5', custom_objects = {'fmeasure': fmeasure})
     print('Successfully loading model')
     pre_y_test = model.predict(pre_x_test, batch_size = BATCHNUM, verbose = 1)
