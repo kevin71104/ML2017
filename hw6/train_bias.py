@@ -51,7 +51,8 @@ parser.add_argument('-e', '--extra', action='store_true', help='use extra featur
 parser.add_argument('-m', '--model', help='model name')
 parser.add_argument('-o', '--output', help='output name')
 parser.add_argument('-d', '--dimension', help='latent dimension')
-parser.add_argument('-b', '--bias', action='store_true', help='use bias')
+parser.add_argument('-mb', '--moviebias', action='store_true', help='use movie bias')
+parser.add_argument('-ub', '--userbias', action='store_true', help='use user bias')
 args = parser.parse_args()
 
 # ==== Read Dataset ============================================================
@@ -118,7 +119,6 @@ User_embed = Embedding(output_dim = embedding_dim,
                        embeddings_regularizer = regularizers.l2(1e-5),
                        trainable=True)(User_input)
 User_reshape = Reshape((embedding_dim,))(User_embed)
-User_reshape = Dropout(0.1)(User_reshape)
 User_bias = (Embedding(output_dim = 1,
                        input_dim = max_userid,
                        input_length = 1,
@@ -135,7 +135,6 @@ Movie_embed = Embedding(output_dim = embedding_dim,
                         embeddings_regularizer = regularizers.l2(1e-5),
                         trainable=True)(Movie_input)
 Movie_reshape = Reshape((embedding_dim,))(Movie_embed)
-Movie_reshape = Dropout(0.1)(Movie_reshape)
 Movie_bias = (Embedding(output_dim = 1,
                         input_dim = max_userid,
                         input_length = 1,
@@ -185,14 +184,24 @@ elif args.extra:
     output = Dense(1, activation='relu')(dnn)
     model = Model(inputs=[User_input, Movie_input], outputs = output)
 else:
-    print('Use matrix factorization')
+    User_reshape = Dropout(0.1)(User_reshape)
+    Movie_reshape = Dropout(0.1)(Movie_reshape)
     Main_dot = Dot(axes = 1)([User_reshape, Movie_reshape])
-    if args.bias:
-        Main_add = Add()([Main_dot, User_bias, Movie_bias])
+    if args.moviebias :
+        if args.userbias:
+            print('Use matrix factorization with movie and user bias')
+            Main_add = Add()([Main_dot, Movie_bias, User_bias])
+        else:
+            Main_add = Add()([Main_dot, Movie_bias])
+            print('Use matrix factorization with movie bias')
     else:
-        Main_add = Main_dot
+        if args.userbias:
+            print('Use matrix factorization with user bias')
+            Main_add = Add()([Main_dot, User_bias])
+        else:
+            Main_add = Main_dot
+            print('Use matrix factorization without bias')
     model = Model([User_input,Movie_input], Main_add)
-
 
 model.summary()
 checkpoint = ModelCheckpoint(filepath = 'bestmodel%s.hdf5'%args.model,
