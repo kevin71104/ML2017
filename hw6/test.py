@@ -1,6 +1,6 @@
 import numpy as np
-import sys
 from keras.models import load_model
+from argparse import ArgumentParser
 
 def read_data(path,train):
     users = []
@@ -17,18 +17,32 @@ def read_data(path,train):
                 if train:
                     rating.append(line[3])
     return users,movies,rating
+# ==== PARSING =================================================================
+parser = ArgumentParser()
+parser.add_argument('--old', action='store_true', help='Use old version')
+parser.add_argument('-n', '--normal', action='store_true', help='use Normalization')
+parser.add_argument('-m', '--model', help='model name')
+parser.add_argument('-o', '--output', help='output name')
+parser.add_argument('-i', '--input', help='input name')
+args = parser.parse_args()
 
-test_path = './data/test.csv'
+# ==== Read Test Data ==========================================================
+test_path = args.input
 users,movies,_ = read_data(test_path,False)
-users = np.array(users).astype('int')
-movies = np.array(movies).astype('int')
+if args.old:
+    users = np.array(users).astype('int')
+    movies = np.array(movies).astype('int')
+else:
+    users = np.array(users).astype('int') - 1
+    movies = np.array(movies).astype('int') - 1
 
-model = load_model(sys.argv[1])
+model = load_model(args.model)
 
-output = model.predict([users,movies])
-output = output * 1.116898 + 3.581712
+output = model.predict([users,movies], verbose=1)
+if args.normal:
+    output = output * 1.116898 + 3.581712
 
-with open(sys.argv[2],'w') as f:
+with open(args.output,'w') as f:
 	f.write("TestDataID,Rating\n")
 	for i,rating in enumerate(output):
             if round(rating[0]) > 5:
